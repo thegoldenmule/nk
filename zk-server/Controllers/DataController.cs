@@ -1,10 +1,11 @@
 using System;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using zk_server.Models;
-using zk_server.Models.Db;
+using Zk.Models;
+using Zk.Models.Db;
 
 namespace Zk.Controllers
 {
@@ -53,7 +54,6 @@ namespace Zk.Controllers
             rsa.ImportRSAPublicKey(new ReadOnlySpan<byte>(pk), out _);
             
             // hash
-            // TODO: allow other algorithms
             var sha = SHA512.Create();
             var hash = sha.ComputeHash(payloadBytes);
             var verifier = new RSAPKCS1SignatureDeformatter(rsa);
@@ -87,8 +87,35 @@ namespace Zk.Controllers
 
         [HttpPut]
         [Route("{userId}/{key}")]
-        public async Task<UpdateDataResponse> Update(string key, UpdateDataRequest req)
+        public async Task<UpdateDataResponse> Update(string userId, string key, UpdateDataRequest req)
         {
+            throw new NotImplementedException();
+        }
+
+        [HttpGet]
+        [Route("{userId}/{key}")]
+        public async Task<GetDataResponse> Get(string userId, string key)
+        {
+            // read proof from header
+            if (!Request.Headers.TryGetValue("X-Zk-Proof", out var proofs) || proofs.Count != 1)
+            {
+                return new GetDataResponse
+                {
+                    Success = false
+                };
+            }
+            var proof = proofs[0];
+
+            if (!Request.Headers.TryGetValue("X-Zk-Sig", out var sigs) || sigs.Count != 1)
+            {
+                return new GetDataResponse
+                {
+                    Success = false
+                };
+            }
+
+            var sig = sigs[0];
+
             throw new NotImplementedException();
         }
     }

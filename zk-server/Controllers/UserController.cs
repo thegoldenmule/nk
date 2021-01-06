@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using zk_server.Models.Db;
+using Zk.Models.Db;
 using Zk.Models;
 
 namespace Zk.Controllers

@@ -1,4 +1,4 @@
-namespace zk_server.Models
+namespace Zk.Models
 {
     public class ProofResponse
     {

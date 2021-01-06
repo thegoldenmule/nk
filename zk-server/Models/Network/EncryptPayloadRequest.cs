@@ -1,4 +1,4 @@
-namespace zk_server.Models.Network
+namespace Zk.Models.Network
 {
     public class EncryptPayloadRequest
     {

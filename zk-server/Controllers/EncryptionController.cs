@@ -1,11 +1,10 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using zk_server.Models.Db;
-using zk_server.Models.Network;
+using Zk.Models.Db;
+using Zk.Models.Network;
 
 namespace Zk.Controllers
 {

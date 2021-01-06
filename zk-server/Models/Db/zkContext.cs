@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 #nullable disable
 
-namespace zk_server.Models.Db
+namespace Zk.Models.Db
 {
     public partial class zkContext : DbContext
     {

@@ -3,8 +3,8 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using zk_server.Models;
-using zk_server.Models.Db;
+using Zk.Models;
+using Zk.Models.Db;
 
 namespace Zk.Controllers
 {
@@ -20,11 +20,12 @@ namespace Zk.Controllers
             _logger = logger;
         }
 
-        [HttpPost] 
-        public async Task<ProofResponse> Create(ProofRequest req)
+        [HttpPost]
+        [Route("{userId}")]
+        public async Task<ProofResponse> Create(string userId)
         {
-            // look up public key
-            var user = await _db.Users.FindAsync(req.UserId);
+            // look up user
+            var user = await _db.Users.FindAsync(userId);
             if (user == null)
             {
                 return new ProofResponse
@@ -33,31 +34,21 @@ namespace Zk.Controllers
                 };
             }
             
-            // generate p_plaintext
-            var plaintext = GenerateRandomString(1024);
-            /*
-            // generate p_ciphertext
-            var ciphertext = Encrypt(plaintext, user.Pk);
+            var value = GenerateRandomString(1024);
             
-            // save proof
-            var proof = new Proof
+            // store
+            await _db.Proofs.AddAsync(new Proof
             {
-                PPlaintext = plaintext,
-                UserId = user.Id
-            };
-            
-            await _db.Proofs.AddAsync(proof);
+                PPlaintext = value,
+                UserId = userId
+            });
             await _db.SaveChangesAsync();
-*/
+            
             return new ProofResponse
             {
-                Value = ""
+                Success = true,
+                Value = value
             };
-        }
-
-        private string Encrypt(string plaintext, string publicKey)
-        {
-            throw new NotImplementedException();
         }
 
         private static string GenerateRandomString(int len)
