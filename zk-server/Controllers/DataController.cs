@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Zk.Models;
 using Zk.Models.Db;
+using Zk.Services;
 
 namespace Zk.Controllers
 {
@@ -48,18 +49,8 @@ namespace Zk.Controllers
             
             var payloadBytes = Convert.FromBase64String(req.Payload);
             var sigBytes = Convert.FromBase64String(req.Sig);
-            
-            var rsa = RSA.Create();
-            var pk = Convert.FromBase64String(user.Pk);
-            rsa.ImportRSAPublicKey(new ReadOnlySpan<byte>(pk), out _);
-            
-            // hash
-            var sha = SHA512.Create();
-            var hash = sha.ComputeHash(payloadBytes);
-            var verifier = new RSAPKCS1SignatureDeformatter(rsa);
-            verifier.SetHashAlgorithm("SHA512");
 
-            if (!verifier.VerifySignature(hash, sigBytes))
+            if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyBytes))
             {
                 return new CreateDataResponse
                 {
@@ -105,8 +96,10 @@ namespace Zk.Controllers
                 };
             }
             var proof = proofs[0];
-
-            if (!Request.Headers.TryGetValue("X-Zk-Sig", out var sigs) || sigs.Count != 1)
+            
+            // look up proof (this also validates that the userId matches)
+            var persistentProof = _db.Proofs.FirstOrDefault(p => p.UserId == userId && p.PPlaintext == proof);
+            if (persistentProof == null)
             {
                 return new GetDataResponse
                 {
@@ -114,9 +107,17 @@ namespace Zk.Controllers
                 };
             }
 
-            var sig = sigs[0];
+            // delete proof
+            _db.Proofs.Remove(persistentProof);
+            
+            // now look up the data
+            var data = _db.Data.Single(d => d.UserId == userId && d.Key == key);
 
-            throw new NotImplementedException();
+            return new GetDataResponse
+            {
+                Success = true,
+                Value = data.Data
+            };
         }
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Zk.Models;
 using Zk.Models.Db;
+using Zk.Services;
 
 namespace Zk.Controllers
 {
@@ -34,7 +35,12 @@ namespace Zk.Controllers
                 };
             }
             
-            var value = GenerateRandomString(1024);
+            // generate proof input
+            var value = GenerateRandomString(128);
+            
+            // encrypt proof input
+            var encValueBytes = EncryptionUtility.Encrypt(user.PublicKeyBytes, Convert.FromBase64String(value));
+            var encValue = Convert.ToBase64String(encValueBytes);
             
             // store
             await _db.Proofs.AddAsync(new Proof
@@ -47,10 +53,11 @@ namespace Zk.Controllers
             return new ProofResponse
             {
                 Success = true,
-                Value = value
+                Value = encValue
             };
         }
 
+        // TODO: This doesn't generate a string of the correct length.
         private static string GenerateRandomString(int len)
         {
             using var rng = new RNGCryptoServiceProvider();
