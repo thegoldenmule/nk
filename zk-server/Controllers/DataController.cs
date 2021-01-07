@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Zk.Models;
 using Zk.Models.Db;
@@ -29,7 +29,7 @@ namespace Zk.Controllers
             User user;
             try
             {
-                user = await _db.Users.FindAsync(userId);
+                user = await _db.Users.SingleAsync(u => u.Id == userId);
             }
             catch
             {
@@ -39,14 +39,6 @@ namespace Zk.Controllers
                 };
             }
 
-            if (user == null)
-            {
-                return new CreateDataResponse
-                {
-                    Success = false
-                };
-            }
-            
             var payloadBytes = Convert.FromBase64String(req.Payload);
             var sigBytes = Convert.FromBase64String(req.Sig);
 
@@ -80,7 +72,44 @@ namespace Zk.Controllers
         [Route("{userId}/{key}")]
         public async Task<UpdateDataResponse> Update(string userId, string key, UpdateDataRequest req)
         {
-            throw new NotImplementedException();
+            User user;
+            try
+            {
+                user = await _db.Users.SingleAsync(u => u.Id == userId);
+            }
+            catch
+            {
+                return new UpdateDataResponse
+                {
+                    Success = false
+                };
+            }
+
+            var payloadBytes = Convert.FromBase64String(req.Payload);
+            var sigBytes = Convert.FromBase64String(req.Sig);
+
+            if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyBytes))
+            {
+                return new UpdateDataResponse
+                {
+                    Success = false
+                };
+            }
+            
+            // we have now verified that the payload has come from the owner of
+            // the private key, and they own this data
+            
+            // update
+            var data = await _db.Data.SingleAsync(d => d.Key == key);
+            data.Data = req.Payload;
+            _db.Update(data);
+            
+            await _db.SaveChangesAsync();
+
+            return new UpdateDataResponse
+            {
+                Success = true
+            };
         }
 
         [HttpGet]
@@ -98,7 +127,7 @@ namespace Zk.Controllers
             var proof = proofs[0];
             
             // look up proof (this also validates that the userId matches)
-            var persistentProof = _db.Proofs.FirstOrDefault(p => p.UserId == userId && p.PPlaintext == proof);
+            var persistentProof = await _db.Proofs.SingleAsync(p => p.UserId == userId && p.PPlaintext == proof);
             if (persistentProof == null)
             {
                 return new GetDataResponse
@@ -109,6 +138,7 @@ namespace Zk.Controllers
 
             // delete proof
             _db.Proofs.Remove(persistentProof);
+            await _db.SaveChangesAsync();
             
             // now look up the data
             var data = _db.Data.Single(d => d.UserId == userId && d.Key == key);

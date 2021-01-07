@@ -2,7 +2,6 @@ using System;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Zk.Models.Db;
 using Zk.Models.Network;
 using Zk.Services;
 
@@ -10,12 +9,11 @@ namespace Zk.Controllers
 {
     [ApiController]
     [Route("utilities")]
-    public class EncryptionController : ControllerBase
+    public class UtilitiesController : ControllerBase
     {
-        private readonly zkContext _db = new zkContext();
-        private readonly ILogger<EncryptionController> _logger;
+        private readonly ILogger<UtilitiesController> _logger;
 
-        public EncryptionController(ILogger<EncryptionController> logger)
+        public UtilitiesController(ILogger<UtilitiesController> logger)
         {
             _logger = logger;
         }
