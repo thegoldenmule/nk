@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 #nullable disable
 
-namespace zk_server.Models
+namespace zk_server.Models.Db
 {
     public partial class zkContext : DbContext
     {
@@ -18,7 +18,7 @@ namespace zk_server.Models
         }
 
         public virtual DbSet<Datum> Data { get; set; }
-        public virtual DbSet<Salt> Salts { get; set; }
+        public virtual DbSet<Proof> Proofs { get; set; }
         public virtual DbSet<User> Users { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -53,17 +53,21 @@ namespace zk_server.Models
                     .HasColumnName("userId");
             });
 
-            modelBuilder.Entity<Salt>(entity =>
+            modelBuilder.Entity<Proof>(entity =>
             {
-                entity.ToTable("salt");
+                entity.ToTable("proof");
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id")
                     .HasDefaultValueSql("nextval('salts_id_seq'::regclass)");
 
-                entity.Property(e => e.Salt1)
+                entity.Property(e => e.PPlaintext)
                     .IsRequired()
-                    .HasColumnName("salt");
+                    .HasColumnName("p_plaintext");
+
+                entity.Property(e => e.UserId)
+                    .IsRequired()
+                    .HasColumnName("userId");
             });
 
             modelBuilder.Entity<User>(entity =>

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 #nullable disable
 
-namespace zk_server.Models
+namespace zk_server.Models.Db
 {
     public partial class User
     {

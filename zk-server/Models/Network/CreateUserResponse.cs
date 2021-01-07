@@ -1,6 +1,6 @@
 namespace Zk.Models
 {
-    public class UserCreationRecord
+    public class CreateUserResponse
     {
         public string UserId { get; set; }
     }

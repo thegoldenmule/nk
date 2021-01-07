@@ -1,9 +1,9 @@
-using System;
 using System.IO;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using zk_server.Models;
+using zk_server.Models.Db;
 using Zk.Models;
 
 namespace Zk.Controllers
@@ -21,12 +21,15 @@ namespace Zk.Controllers
         }
 
         [HttpPost]
-        public async Task<UserCreationRecord> Create()
+        public async Task<CreateUserResponse> Create()
         {
             using (var reader = new StreamReader(Request.Body))
             {
                 var pk = await reader.ReadToEndAsync();
-                var id = Guid.NewGuid().ToString();
+                
+                // TODO: validate pk
+                
+                var id = GenerateUserId();
 
                 await _db.Users.AddAsync(new User
                 {
@@ -36,11 +39,21 @@ namespace Zk.Controllers
                 
                 await _db.SaveChangesAsync();
                 
-                return new UserCreationRecord
+                return new CreateUserResponse
                 {
                     UserId = id
                 };
             }
+        }
+        
+        private static string GenerateUserId()
+        {
+            using var rng = new RNGCryptoServiceProvider();
+            
+            var data = new byte[32];
+            rng.GetBytes(data);
+
+            return Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(data);
         }
     }
 }
