@@ -9,7 +9,7 @@ using Zk.Models.Network;
 namespace Zk.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("utilities")]
     public class EncryptionController : ControllerBase
     {
         private readonly zkContext _db = new zkContext();
@@ -21,16 +21,50 @@ namespace Zk.Controllers
         }
 
         [HttpPost]
+        [Route("encrypt")]
         public EncryptPayloadResponse Encrypt(EncryptPayloadRequest req)
         {
-            var key = Convert.FromBase64String(req.PrivateKey);
-            var plaintext = Encoding.UTF8.GetBytes(req.PlainText);
+            var publicKey = Convert.FromBase64String(req.PublicKey);
+            var plainText = Encoding.UTF8.GetBytes(req.PlainText);
             
             using var rsa = RSA.Create();
-            rsa.ImportRSAPrivateKey(new ReadOnlySpan<byte>(key), out _);
+            rsa.ImportRSAPublicKey(new ReadOnlySpan<byte>(publicKey), out _);
 
-            var cipherBytes = rsa.Encrypt(plaintext, RSAEncryptionPadding.Pkcs1);
-            var ciphertext = Convert.ToBase64String(cipherBytes);
+            var cipherBytes = rsa.Encrypt(plainText, RSAEncryptionPadding.Pkcs1);
+            var cipherText = Convert.ToBase64String(cipherBytes);
+
+            return new EncryptPayloadResponse
+            {
+                Success = true,
+                CipherText = cipherText,
+            };
+        }
+        
+        [HttpPost]
+        [Route("decrypt")]
+        public DecryptPayloadResponse Decrypt(DecryptPayloadRequest req)
+        {
+            var privateKey = Convert.FromBase64String(req.PrivateKey);
+            var cipherBytes = Convert.FromBase64String(req.CipherText);
+
+            using var rsa = RSA.Create();
+            rsa.ImportRSAPrivateKey(new ReadOnlySpan<byte>(privateKey), out _);
+
+            var plainBytes = rsa.Decrypt(cipherBytes, RSAEncryptionPadding.Pkcs1);
+            var plainText = Encoding.UTF8.GetString(plainBytes);
+
+            return new DecryptPayloadResponse
+            {
+                Success = true,
+                PlainText = plainText
+            };
+        }
+
+        [HttpPost]
+        [Route("sign")]
+        public SignPayloadResponse Sign(SignPayloadRequest req)
+        {
+            var cipherBytes = Convert.FromBase64String(req.CipherText);
 
             byte[] hash;
             using (var alg = SHA512.Create())
@@ -38,16 +72,46 @@ namespace Zk.Controllers
                 hash = alg.ComputeHash(cipherBytes);
             }
             
+            var privateKey = Convert.FromBase64String(req.PrivateKey);
+            using var rsa = RSA.Create();
+            rsa.ImportRSAPrivateKey(new ReadOnlySpan<byte>(privateKey), out _);
+            
             var formatter = new RSAPKCS1SignatureFormatter(rsa);
             formatter.SetHashAlgorithm("SHA512");
             
             var sig = Convert.ToBase64String(formatter.CreateSignature(hash));
 
-            return new EncryptPayloadResponse
+            return new SignPayloadResponse
             {
                 Success = true,
-                CipherText = ciphertext,
                 Sig = sig
+            };
+        }
+        
+        [HttpPost]
+        [Route("verify")]
+        public VerifyPayloadResponse Verify(VerifyPayloadRequest req)
+        {
+            var cipherBytes = Convert.FromBase64String(req.CipherText);
+            var sigBytes = Convert.FromBase64String(req.Sig);
+
+            byte[] cipherHash;
+            using (var alg = SHA512.Create())
+            {
+                cipherHash = alg.ComputeHash(cipherBytes);
+            }
+            
+            var publicKeyBytes = Convert.FromBase64String(req.PublicKey);
+            using var rsa = RSA.Create();
+            rsa.ImportRSAPublicKey(new ReadOnlySpan<byte>(publicKeyBytes), out _);
+            
+            var deformatter = new RSAPKCS1SignatureDeformatter(rsa);
+            deformatter.SetHashAlgorithm("SHA512");
+
+            return new VerifyPayloadResponse
+            {
+                Success = true,
+                IsValid = deformatter.VerifySignature(cipherHash, sigBytes)
             };
         }
     }
