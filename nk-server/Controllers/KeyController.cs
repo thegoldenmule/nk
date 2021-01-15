@@ -2,10 +2,10 @@ using System;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Zk.Models.Db;
-using Zk.Models.Network;
+using TheGoldenMule.Nk.Models.Db;
+using TheGoldenMule.Nk.Models.Network;
 
-namespace Zk.Controllers
+namespace TheGoldenMule.Nk.Controllers
 {
     [ApiController]
     [Route("[controller]")]

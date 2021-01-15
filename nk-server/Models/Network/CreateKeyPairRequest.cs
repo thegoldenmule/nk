@@ -1,4 +1,4 @@
-namespace Zk.Models.Network
+namespace TheGoldenMule.Nk.Models.Network
 {
     public class CreateKeyPairRequest
     {

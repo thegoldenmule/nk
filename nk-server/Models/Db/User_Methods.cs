@@ -1,6 +1,6 @@
 using System;
 
-namespace Zk.Models.Db
+namespace TheGoldenMule.Nk.Models.Db
 {
     public partial class User
     {

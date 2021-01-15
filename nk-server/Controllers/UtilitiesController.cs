@@ -2,10 +2,10 @@ using System;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Zk.Models.Network;
-using Zk.Services;
+using TheGoldenMule.Nk.Models.Network;
+using TheGoldenMule.Nk.Services;
 
-namespace Zk.Controllers
+namespace TheGoldenMule.Nk.Controllers
 {
     [ApiController]
     [Route("utilities")]

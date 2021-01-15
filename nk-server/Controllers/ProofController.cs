@@ -3,11 +3,12 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Zk.Models;
-using Zk.Models.Db;
-using Zk.Services;
+using TheGoldenMule.Nk.Models;
+using TheGoldenMule.Nk.Models.Db;
+using TheGoldenMule.Nk.Models.Network;
+using TheGoldenMule.Nk.Services;
 
-namespace Zk.Controllers
+namespace TheGoldenMule.Nk.Controllers
 {
     [ApiController]
     [Route("[controller]")]

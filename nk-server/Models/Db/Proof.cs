@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 #nullable disable
 
-namespace Zk.Models.Db
+namespace TheGoldenMule.Nk.Models.Db
 {
     public partial class Proof
     {

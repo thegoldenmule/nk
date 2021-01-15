@@ -1,7 +1,7 @@
 using System;
 using System.Security.Cryptography;
 
-namespace Zk.Services
+namespace TheGoldenMule.Nk.Services
 {
     public class EncryptionUtility
     {
