@@ -1,5 +1,5 @@
 import './App.css';
-import { Button, Col, Container, Navbar, Row } from 'react-bootstrap';
+import { Button, Col, Container, Form, ListGroup, Navbar, Row } from 'react-bootstrap';
 import { useState } from 'react';
 import 'codemirror/lib/codemirror.css';
 import '@toast-ui/editor/dist/toastui-editor.css';
@@ -18,17 +18,41 @@ const KeyGenView = ({ onGenKey, keyPair }) => {
   )
 };
 
-const TextEditor = ({ isEnabled }) => (
-  isEnabled
-    ? <Editor
-        initialValue="hello react editor world!"
-        previewStyle="vertical"
-        height="600px"
-        initialEditType="wysiwyg"
-        useCommandShortcut={true}
-      />
-    : <p>Generate a key to start.</p>
-)
+const TextEditor = () => {
+
+  return (
+    <Container>
+      <Row>
+        <Col>
+          <Form>
+            <Form.Control size="lg" type="text" placeholder="Title" />
+          </Form>
+        </Col>
+      </Row>
+      <Row>
+        <Col>
+          <Editor
+            initialValue=""
+            placeholder="Start writing"
+            previewStyle="vertical"
+            height="600px"
+            initialEditType="wysiwyg"
+            useCommandShortcut={true}
+          />
+        </Col>
+      </Row>
+    </Container>
+  )
+}
+
+const FileBrowser = () => {
+  return (
+    <ListGroup>
+      <ListGroup.Item>Hello World</ListGroup.Item>
+      <ListGroup.Item>Secret Note</ListGroup.Item>
+    </ListGroup>
+  )
+};
 
 const generateKeyPair = async () => await crypto.subtle.generateKey(
   {
@@ -43,6 +67,7 @@ const generateKeyPair = async () => await crypto.subtle.generateKey(
 
 function App() {
   const [keyPair, setKeyPair] = useState();
+  const isLoggedIn = keyPair !== undefined;
 
   return (
     <div style={{ paddingTop: '20px' }}>
@@ -61,11 +86,18 @@ function App() {
             }}
           />
         </Row>
-        <Row>
-          <Container>
-            <TextEditor isEnabled={keyPair !== undefined}/>
-          </Container>
-        </Row>
+        {
+          isLoggedIn && (
+            <Row>
+              <Col xs={3}>
+                <FileBrowser/>
+              </Col>
+              <Col>
+                <TextEditor/>
+              </Col>
+            </Row>
+          )
+        }
       </Container>
     </div>
   );
