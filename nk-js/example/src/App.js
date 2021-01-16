@@ -1,16 +1,34 @@
 import './App.css';
 import { Button, Col, Container, Navbar, Row } from 'react-bootstrap';
 import { useState } from 'react';
+import 'codemirror/lib/codemirror.css';
+import '@toast-ui/editor/dist/toastui-editor.css';
+
+import { Editor } from '@toast-ui/react-editor';
 
 const KeyGenView = ({ onGenKey, keyPair }) => {
-  console.log(keyPair)
   return (
     <Container>
-      <Button onClick={() => onGenKey()}>Generate Key Pair</Button>
-      <p>{keyPair ? 'Key generated.' : 'No key found.'}</p>
+      {
+        keyPair
+          ? <p>Logged in.</p>
+          : <Button onClick={() => onGenKey()}>Generate Key Pair</Button>
+      }
     </Container>
   )
 };
+
+const TextEditor = ({ isEnabled }) => (
+  isEnabled
+    ? <Editor
+        initialValue="hello react editor world!"
+        previewStyle="vertical"
+        height="600px"
+        initialEditType="wysiwyg"
+        useCommandShortcut={true}
+      />
+    : <p>Generate a key to start.</p>
+)
 
 const generateKeyPair = async () => await crypto.subtle.generateKey(
   {
@@ -42,6 +60,11 @@ function App() {
               setKeyPair(result);
             }}
           />
+        </Row>
+        <Row>
+          <Container>
+            <TextEditor isEnabled={keyPair !== undefined}/>
+          </Container>
         </Row>
       </Container>
     </div>
