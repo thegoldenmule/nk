@@ -3,10 +3,8 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using TheGoldenMule.Nk.Models;
 using TheGoldenMule.Nk.Models.Db;
 using TheGoldenMule.Nk.Models.Network;
-using TheGoldenMule.Nk.Services;
 
 namespace TheGoldenMule.Nk.Controllers
 {
@@ -39,10 +37,6 @@ namespace TheGoldenMule.Nk.Controllers
             // generate proof input
             var value = GenerateRandomString(128);
             
-            // encrypt proof input
-            var encValueBytes = EncryptionUtility.Encrypt(user.PublicKeyBytes, Convert.FromBase64String(value));
-            var encValue = Convert.ToBase64String(encValueBytes);
-            
             // store
             await _db.Proofs.AddAsync(new Proof
             {
@@ -54,7 +48,7 @@ namespace TheGoldenMule.Nk.Controllers
             return new ProofResponse
             {
                 Success = true,
-                Value = encValue
+                Value = value
             };
         }
 

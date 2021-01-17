@@ -135,6 +135,8 @@ namespace TheGoldenMule.Nk.Controllers
                     Success = false
                 };
             }
+            
+            // TODO: verify signature
 
             // delete proof
             _db.Proofs.Remove(persistentProof);
