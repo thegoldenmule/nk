@@ -21,6 +21,20 @@ const generateSymmetricKey = async () => await crypto.subtle.generateKey(
   true,
   ['encrypt', 'decrypt']);
 
+const exportPublicKey = async (publicKey) => {
+  let exportedPublic;
+  try {
+    exportedPublic = await crypto.subtle.exportKey('spki', publicKey);
+  } catch (error) {
+    throw new Error(`Could not export public key: ${error}.`);
+  }
+
+  return btoa(
+    String.fromCharCode.apply(
+      null,
+      new Uint8Array(exportedPublic)));
+};
+
 const aesParameters = () => ({
   name: 'AES-GCM',
   iv: window.crypto.getRandomValues(new Uint8Array(12)),
@@ -71,23 +85,6 @@ const register = async (context) => {
     throw new Error(`Could not generate encryption key: ${error}.`);
   }
 
-  console.log(signingKeys.publicKey)
-
-  // export public key for api
-  let exportedPublic;
-  try {
-    exportedPublic = await crypto.subtle.exportKey('spki', signingKeys.publicKey);
-  } catch (error) {
-    throw new Error(`Could not export public key for upload: ${error}.`);
-  }
-
-  const exported =
-    btoa(
-      String.fromCharCode.apply(
-        null,
-        new Uint8Array(exportedPublic)));
-
-
   // create user
   let json;
   try {
@@ -95,7 +92,7 @@ const register = async (context) => {
       `${context.url}/user`,
       {
         method: 'post',
-        body: exported,
+        body: exportPublicKey(signingKeys.publicKey),
       });
     json = await res.json();
   } catch (e) {
