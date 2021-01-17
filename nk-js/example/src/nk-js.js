@@ -1,23 +1,25 @@
-const generateKeyPair = async () => {
+const generateSigningPair = async () => {
   const pair = await crypto.subtle.generateKey(
     {
-      name: 'RSA-OAEP',
+      name: 'RSA-PSS',
       modulusLength: 4096,
       publicExponent: new Uint8Array([1, 0, 1]),
       hash: 'SHA-256',
     },
     true,
-    ['encrypt', 'decrypt']
+    ['sign', 'verify'],
   );
 
-  console.log('Generated key.');
-
-  const api = await crypto.subtle.exportKey('pkcs8', pair.publicKey);
-
-  console.log('Exported key.');
-
-  return { ...pair, api };
+  return pair;
 };
+
+const generateSymmetricKey = async () => await crypto.subtle.generateKey(
+  {
+    name: 'AES-GCM',
+    length: 256,
+  },
+  true,
+  ['encrypt', 'decrypt']);
 
 const aesParameters = () => ({
   name: 'AES-GCM',
@@ -25,14 +27,27 @@ const aesParameters = () => ({
   tagLength: 128,
 });
 
-const generateSymmetricKey = async () => await crypto.subtle.generateKey(
-    aesParameters(),
-    true,
-    ['encrypt', 'decrypt']);
-
 const createContext = () => ({
   url: 'http://localhost:5000',
-  keys: [],
+  userId: undefined,
+  keys: {
+    signing: undefined,
+    encryption: undefined,
+  },
+  keyNames: [],
+});
+
+const contextWithKeys = (context, signing, encryption) => ({
+  ...context,
+  keys: {
+    signing,
+    encryption,
+  },
+});
+
+const contextWithUserId = (context, userId) => ({
+  ...context,
+  userId
 });
 
 const createContextFrom = data => createContext();
@@ -40,16 +55,38 @@ const createContextFrom = data => createContext();
 const isLoggedIn = context => context.userId !== undefined;
 
 const register = async (context) => {
-  // generate pair
-  let pair;
+  // generate signing pair
+  let signingKeys;
   try {
-    pair = await generateKeyPair();
+    signingKeys = await generateSigningPair();
   } catch (error) {
-    throw new Error(`Could not generate key pair: ${error}.`)
+    throw new Error(`Could not generate signing key pair: ${error}.`);
   }
 
   // generate symmetric key
-  const symmetricKey = await generateSymmetricKey();
+  let encryptionKey;
+  try {
+    encryptionKey = await generateSymmetricKey();
+  } catch (error) {
+    throw new Error(`Could not generate encryption key: ${error}.`);
+  }
+
+  console.log(signingKeys.publicKey)
+
+  // export public key for api
+  let exportedPublic;
+  try {
+    exportedPublic = await crypto.subtle.exportKey('spki', signingKeys.publicKey);
+  } catch (error) {
+    throw new Error(`Could not export public key for upload: ${error}.`);
+  }
+
+  const exported =
+    btoa(
+      String.fromCharCode.apply(
+        null,
+        new Uint8Array(exportedPublic)));
+
 
   // create user
   let json;
@@ -58,22 +95,21 @@ const register = async (context) => {
       `${context.url}/user`,
       {
         method: 'post',
-        body: pair.api,
+        body: exported,
       });
     json = await res.json();
   } catch (e) {
     throw e;
   }
 
-  return {
-    ...context,
-    pair,
-    symmetricKey,
-    userId: json.userId,
-  };
+  return contextWithKeys(
+    contextWithUserId(context, json.userId),
+    signingKeys,
+    encryptionKey,
+  );
 };
 
-const createData = async (context, key, value) => {
+const createData = async (context, keyName, value) => {
   const enc = new TextEncoder();
   const encodedValue = enc.encode(value);
 
@@ -82,19 +118,19 @@ const createData = async (context, key, value) => {
   try {
     cipherText = await crypto.subtle.encrypt(
       aesParameters(),
-      context.symmetricKey,
+      context.keys.encryption,
       encodedValue
     );
   } catch (error) {
     throw new Error(`Could not encrypt value: ${error}.`);
   }
 
-  // sign ciphertext
+  // sign ciphertext with signing key
   let signature;
   try {
     signature = await window.crypto.subtle.sign(
       'RSA-OAEP',
-      context.pair.private,
+      context.keys.signing.privateKey,
       enc.encode(cipherText),
     )
   } catch (error) {
@@ -108,7 +144,7 @@ const createData = async (context, key, value) => {
       {
         method: 'post',
         body: JSON.stringify({
-          Key: key,
+          Key: keyName,
           Payload: cipherText,
           Sig: signature
         })
@@ -125,7 +161,7 @@ const createData = async (context, key, value) => {
 
   return {
     ...context,
-    keys: [...context.keys, key],
+    keyNames: [...context.keyNames, keyName],
   };
 };
 

@@ -1,19 +1,24 @@
 import './App.css';
 import { Button, Col, Container, Form, ListGroup, Navbar, Row } from 'react-bootstrap';
 import { useState } from 'react';
+import { createContext, isLoggedIn, register } from './nk-js';
 import 'codemirror/lib/codemirror.css';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
 import { Editor } from '@toast-ui/react-editor';
 
-const KeyGenView = ({ onGenKey, keyPair }) => {
+const ProfileView = ({ context, onCreateUser }) => {
   return (
     <Container>
-      {
-        keyPair
-          ? <p>Logged in.</p>
-          : <Button onClick={() => onGenKey()}>Generate Key Pair</Button>
-      }
+      <Row>
+        <Col>
+          {
+            isLoggedIn(context)
+              ? <p>{`Logged in. UserId: '${context.userId}'.`}</p>
+              : <Button onClick={() => onCreateUser()}>Create Account</Button>
+          }
+        </Col>
+      </Row>
     </Container>
   )
 };
@@ -54,20 +59,10 @@ const FileBrowser = () => {
   )
 };
 
-const generateKeyPair = async () => await crypto.subtle.generateKey(
-  {
-    name: "RSA-OAEP",
-    modulusLength: 4096,
-    publicExponent: new Uint8Array([1, 0, 1]),
-    hash: "SHA-256"
-  },
-  true,
-  ["encrypt", "decrypt"]
-);
+
 
 function App() {
-  const [keyPair, setKeyPair] = useState();
-  const isLoggedIn = keyPair !== undefined;
+  const [context, setContext] = useState(createContext());
 
   return (
     <div style={{ paddingTop: '20px' }}>
@@ -78,16 +73,16 @@ function App() {
           </Navbar>
         </Row>
         <Row>
-          <KeyGenView
-            keyPair={keyPair}
-            onGenKey={async () => {
-              const result = await generateKeyPair();
-              setKeyPair(result);
+          <ProfileView
+            context={context}
+            onCreateUser={async () => {
+              const newContext = await register(context);
+              setContext(newContext);
             }}
           />
         </Row>
         {
-          isLoggedIn && (
+          isLoggedIn(context) && (
             <Row>
               <Col xs={3}>
                 <FileBrowser/>
