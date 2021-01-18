@@ -21,6 +21,11 @@ const generateSymmetricKey = async () => await crypto.subtle.generateKey(
   true,
   ['encrypt', 'decrypt']);
 
+const arrayBufferToBase64String = buffer => btoa(
+  String.fromCharCode.apply(
+    null,
+    new Uint8Array(buffer)));
+
 const exportPublicKey = async (publicKey) => {
   let exportedPublic;
   try {
@@ -29,10 +34,7 @@ const exportPublicKey = async (publicKey) => {
     throw new Error(`Could not export public key: ${error}.`);
   }
 
-  return btoa(
-    String.fromCharCode.apply(
-      null,
-      new Uint8Array(exportedPublic)));
+  return arrayBufferToBase64String(exportedPublic);
 };
 
 const aesParameters = () => ({
@@ -93,6 +95,9 @@ const register = async (context) => {
       {
         method: 'post',
         body: exportPublicKey(signingKeys.publicKey),
+        headers: {
+          contentType: 'application/json'
+        },
       });
     json = await res.json();
   } catch (e) {
@@ -111,9 +116,9 @@ const createData = async (context, keyName, value) => {
   const encodedValue = enc.encode(value);
 
   // encrypt
-  let cipherText;
+  let cipher;
   try {
-    cipherText = await crypto.subtle.encrypt(
+    cipher = await crypto.subtle.encrypt(
       aesParameters(),
       context.keys.encryption,
       encodedValue
@@ -131,11 +136,14 @@ const createData = async (context, keyName, value) => {
         saltLength: 32
       },
       context.keys.signing.privateKey,
-      enc.encode(cipherText),
+      enc.encode(cipher),
     );
   } catch (error) {
     throw new Error(`Could not sign value: ${error}.`);
   }
+
+  const cipherTextString = arrayBufferToBase64String(cipher);
+  const signatureString = arrayBufferToBase64String(signature);
 
   // send
   let json;
@@ -145,9 +153,13 @@ const createData = async (context, keyName, value) => {
         method: 'post',
         body: JSON.stringify({
           Key: keyName,
-          Payload: cipherText,
-          Sig: signature
-        })
+          Payload: cipherTextString,
+          Sig: signatureString,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
       });
 
     json = await res.json();
