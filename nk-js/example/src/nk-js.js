@@ -126,12 +126,15 @@ const createData = async (context, keyName, value) => {
   let signature;
   try {
     signature = await window.crypto.subtle.sign(
-      'RSA-OAEP',
+      {
+        name: 'RSA-PSS',
+        saltLength: 32
+      },
       context.keys.signing.privateKey,
       enc.encode(cipherText),
-    )
+    );
   } catch (error) {
-    throw new Error(`Could not sign value: ${error}.`)
+    throw new Error(`Could not sign value: ${error}.`);
   }
 
   // send

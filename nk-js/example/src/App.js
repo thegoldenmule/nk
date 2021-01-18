@@ -1,7 +1,7 @@
 import './App.css';
 import { Button, Col, Container, Form, ListGroup, Navbar, Row } from 'react-bootstrap';
 import { useState } from 'react';
-import { createContext, isLoggedIn, register } from './nk-js';
+import { createContext, isLoggedIn, register, createData } from './nk-js';
 import 'codemirror/lib/codemirror.css';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
@@ -23,7 +23,10 @@ const ProfileView = ({ context, onCreateUser }) => {
   )
 };
 
-const TextEditor = () => {
+const TextEditor = ({ activeNote }) => {
+  if (!activeNote) {
+    return null;
+  }
 
   return (
     <Container>
@@ -50,19 +53,25 @@ const TextEditor = () => {
   )
 }
 
-const FileBrowser = () => {
+const FileBrowser = ({ notes }) => {
   return (
     <ListGroup>
-      <ListGroup.Item>Hello World</ListGroup.Item>
-      <ListGroup.Item>Secret Note</ListGroup.Item>
+      {
+        notes.map((note, i) => (
+          <ListGroup.Item key={i}>note</ListGroup.Item>
+        ))
+      }
     </ListGroup>
-  )
+  );
 };
 
-
+const getNote = (notes, noteId) => notes.find(n => n.key === noteId);
 
 function App() {
   const [context, setContext] = useState(createContext());
+  const [notes, setNotes] = useState([]);
+  const [activeNote, setActiveNote] = useState('');
+  const note = getNote(notes, activeNote);
 
   return (
     <div style={{ paddingTop: '20px' }}>
@@ -85,10 +94,16 @@ function App() {
           isLoggedIn(context) && (
             <Row>
               <Col xs={3}>
-                <FileBrowser/>
+                <Button
+                  onClick={async () => {
+                    const newContext = await createData(context, "Test", "New Note");
+                    setContext(newContext);
+                  }}
+                >+</Button>
+                <FileBrowser notes={notes} />
               </Col>
               <Col>
-                <TextEditor/>
+                <TextEditor activeNote={activeNote} />
               </Col>
             </Row>
           )
