@@ -1,9 +1,9 @@
 namespace TheGoldenMule.Nk.Models.Network
 {
-    public class CreateUserResponse
+    public class GetKeysResponse
     {
         public bool Success { get; set; }
         public string Error { get; set; }
-        public string UserId { get; set; }
+        public string[] Keys { get; set; }
     }
 }

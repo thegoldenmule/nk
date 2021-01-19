@@ -5,49 +5,31 @@ namespace TheGoldenMule.Nk.Services
 {
     public class EncryptionUtility
     {
-        public static byte[] Encrypt(byte[] publicKey, byte[] plainText)
+        public static bool IsValidPublicKey(char[] publicKey)
         {
             using var rsa = RSA.Create();
-            rsa.ImportRSAPublicKey(new ReadOnlySpan<byte>(publicKey), out _);
+            try
+            {
+                rsa.ImportFromPem(new ReadOnlySpan<char>(publicKey));
+            }
+            catch
+            {
+                return false;
+            }
 
-            return rsa.Encrypt(plainText, RSAEncryptionPadding.Pkcs1);
+            return true;
         }
-
-        public static byte[] Decrypt(byte[] privateKey, byte[] cipherText)
-        {
-            using var rsa = RSA.Create();
-            rsa.ImportRSAPrivateKey(new ReadOnlySpan<byte>(privateKey), out _);
-
-            return rsa.Decrypt(cipherText, RSAEncryptionPadding.Pkcs1);
-        }
-
-        public static byte[] Sign(byte[] cipherText, byte[] privateKey, string alg = "SHA512")
+        
+        public static bool IsValidSig(byte[] cipherText, byte[] sig, char[] publicKey, string alg = "SHA512")
         {
             byte[] hash;
-            using (var hashFn = Alg(alg))
+            using (var hashFn = Algorithm(alg))
             {
                 hash = hashFn.ComputeHash(cipherText);
             }
             
             using var rsa = RSA.Create();
-            rsa.ImportRSAPrivateKey(new ReadOnlySpan<byte>(privateKey), out _);
-            
-            var formatter = new RSAPKCS1SignatureFormatter(rsa);
-            formatter.SetHashAlgorithm(alg);
-            
-            return formatter.CreateSignature(hash);
-        }
-
-        public static bool IsValidSig(byte[] cipherText, byte[] sig, byte[] publicKey, string alg = "SHA512")
-        {
-            byte[] hash;
-            using (var hashFn = Alg(alg))
-            {
-                hash = hashFn.ComputeHash(cipherText);
-            }
-            
-            using var rsa = RSA.Create();
-            rsa.ImportRSAPublicKey(new ReadOnlySpan<byte>(publicKey), out _);
+            rsa.ImportFromPem(new ReadOnlySpan<char>(publicKey));
             
             var deformatter = new RSAPKCS1SignatureDeformatter(rsa);
             deformatter.SetHashAlgorithm(alg);
@@ -55,7 +37,7 @@ namespace TheGoldenMule.Nk.Services
             return deformatter.VerifySignature(hash, sig);
         }
 
-        private static HashAlgorithm Alg(string alg)
+        public static HashAlgorithm Algorithm(string alg)
         {
             switch (alg)
             {

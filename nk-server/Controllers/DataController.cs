@@ -21,18 +21,66 @@ namespace TheGoldenMule.Nk.Controllers
         {
             _logger = logger;
         }
-
-        [HttpPost]
-        [Route("{userId}")]
-        public async Task<CreateDataResponse> Create(string userId, CreateDataRequest req)
+        
+        private async Task CheckSignature(string userId)
         {
+            // read proof and signature from header
+            if (!Request.Headers.TryGetValue("X-Nk-Proof", out var proofs) || proofs.Count != 1
+                || !Request.Headers.TryGetValue("X-Nk-Proof-Sig", out var signatures) || signatures.Count != 1)
+            {
+                throw new Exception("Invalid headers.");
+            }
+
+            var proof = proofs[0];
+            var sig = signatures[0];
+
+            // find user
             User user;
             try
             {
                 user = await _db.Users.SingleAsync(u => u.Id == userId);
             }
-            catch
+            catch (Exception exception)
             {
+                throw new Exception("User not found.", exception);
+            }
+
+            // look up proof (this also validates that the userId matches)
+            var persistentProof = await _db.Proofs.SingleAsync(p => p.UserId == userId && p.PPlaintext == proof);
+            if (persistentProof == null)
+            {
+                throw new Exception("Invalid proof.");
+            }
+
+            // delete proof
+            _db.Proofs.Remove(persistentProof);
+            await _db.SaveChangesAsync();
+
+            // verify signature
+            if (!EncryptionUtility.IsValidSig(
+                proof.ToCharArray().Select(c => (byte) c).ToArray(),
+                Convert.FromBase64String(sig),
+                user.PublicKeyChars))
+            {
+                throw new Exception("Invalid signature.");
+            }
+        }
+
+        [HttpPost]
+        [Route("{userId}")]
+        public async Task<CreateDataResponse> Create(string userId, CreateDataRequest req)
+        {
+            _logger.LogInformation("Received request to create data.", new { userId });
+            
+            User user;
+            try
+            {
+                user = await _db.Users.SingleAsync(u => u.Id == userId);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError($"Could not create data: could not query users: {exception}.", new { userId });
+                
                 return new CreateDataResponse
                 {
                     Success = false
@@ -42,8 +90,10 @@ namespace TheGoldenMule.Nk.Controllers
             var payloadBytes = Convert.FromBase64String(req.Payload);
             var sigBytes = Convert.FromBase64String(req.Sig);
 
-            if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyBytes))
+            if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyChars))
             {
+                _logger.LogInformation($"Could not create data: invalid signature.", new { userId });
+                
                 return new CreateDataResponse
                 {
                     Success = false
@@ -54,13 +104,40 @@ namespace TheGoldenMule.Nk.Controllers
             // the private key
             
             // store payload
-            await _db.Data.AddAsync(new Datum
+            try
             {
-                UserId = userId,
-                Key = req.Key,
-                Data = req.Payload
-            });
-            await _db.SaveChangesAsync();
+                await _db.Data.AddAsync(new Datum
+                {
+                    UserId = userId,
+                    Key = req.Key,
+                    Data = req.Payload
+                });
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError($"Could not create data: could not add data to store: {exception}.", new { userId });
+                
+                return new CreateDataResponse
+                {
+                    Success = false
+                };
+            }
+
+            try
+            {
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError($"Could not create data: could not save data to store: {exception}.", new { userId });
+                
+                return new CreateDataResponse
+                {
+                    Success = false
+                };
+            }
+            
+            _logger.LogInformation("Successfully created new data object.", new { userId });
 
             return new CreateDataResponse
             {
@@ -88,7 +165,7 @@ namespace TheGoldenMule.Nk.Controllers
             var payloadBytes = Convert.FromBase64String(req.Payload);
             var sigBytes = Convert.FromBase64String(req.Sig);
 
-            if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyBytes))
+            if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyChars))
             {
                 return new UpdateDataResponse
                 {
@@ -113,35 +190,41 @@ namespace TheGoldenMule.Nk.Controllers
         }
 
         [HttpGet]
+        [Route("{userId}")]
+        public async Task<GetKeysResponse> GetKeys(string userId)
+        {
+            _logger.LogInformation("Attempting to get keys.", new { userId });
+
+            try
+            {
+                await CheckSignature(userId);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogInformation($"Could not get keys: {exception}.");
+                
+                return new GetKeysResponse
+                {
+                    Success = false
+                };
+            }
+
+            // read all keys
+            var data = await _db.Data.Where(d => d.UserId == userId).ToListAsync();
+
+            return new GetKeysResponse
+            {
+                Success = true,
+                Keys = data.Select(d => d.Key).ToArray()
+            };
+        }
+
+        [HttpGet]
         [Route("{userId}/{key}")]
         public async Task<GetDataResponse> Get(string userId, string key)
         {
-            // read proof from header
-            if (!Request.Headers.TryGetValue("X-Zk-Proof", out var proofs) || proofs.Count != 1)
-            {
-                return new GetDataResponse
-                {
-                    Success = false
-                };
-            }
-            var proof = proofs[0];
-            
-            // look up proof (this also validates that the userId matches)
-            var persistentProof = await _db.Proofs.SingleAsync(p => p.UserId == userId && p.PPlaintext == proof);
-            if (persistentProof == null)
-            {
-                return new GetDataResponse
-                {
-                    Success = false
-                };
-            }
-            
-            // TODO: verify signature
+            // TODO: verify proof
 
-            // delete proof
-            _db.Proofs.Remove(persistentProof);
-            await _db.SaveChangesAsync();
-            
             // now look up the data
             var data = _db.Data.Single(d => d.UserId == userId && d.Key == key);
 

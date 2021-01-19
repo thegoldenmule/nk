@@ -3,9 +3,9 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using TheGoldenMule.Nk.Models;
 using TheGoldenMule.Nk.Models.Db;
 using TheGoldenMule.Nk.Models.Network;
+using TheGoldenMule.Nk.Services;
 
 namespace TheGoldenMule.Nk.Controllers
 {
@@ -24,11 +24,20 @@ namespace TheGoldenMule.Nk.Controllers
         [HttpPost]
         public async Task<CreateUserResponse> Create()
         {
+            _logger.LogInformation("Received a request to create user.");
+            
             using (var reader = new StreamReader(Request.Body))
             {
                 var pk = await reader.ReadToEndAsync();
-                
-                // TODO: validate pk
+                if (!EncryptionUtility.IsValidPublicKey(pk.ToCharArray()))
+                {
+                    _logger.LogInformation("Could not create user: invalid public key.");
+                    
+                    return new CreateUserResponse
+                    {
+                        Success = false,
+                    };
+                }
                 
                 var id = GenerateUserId();
 
@@ -40,8 +49,11 @@ namespace TheGoldenMule.Nk.Controllers
                 
                 await _db.SaveChangesAsync();
                 
+                _logger.LogInformation("Created user successfully.", new { userId = id });
+                
                 return new CreateUserResponse
                 {
+                    Success = true,
                     UserId = id
                 };
             }
