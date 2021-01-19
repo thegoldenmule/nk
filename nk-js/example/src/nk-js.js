@@ -1,7 +1,66 @@
+const getKeyMaterial = async password => await crypto.subtle.importKey(
+  "raw",
+  new TextEncoder().encode(password),
+  { name: 'PBKDF2' },
+  false,
+  ["deriveBits", "deriveKey"]
+);
+
+const deriveKey = async (keyMaterial, salt) => await crypto.subtle.deriveKey(
+  {
+    "name": "PBKDF2",
+    salt,
+    "iterations": 100000,
+    "hash": "SHA-256"
+  },
+  keyMaterial,
+  { "name": "AES-KW", "length": 256},
+  true,
+  [ "wrapKey", "unwrapKey" ]
+);
+
+const serializeKey = async (key, password) => {
+  const keyMaterial = await getKeyMaterial(password);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const wrappingKey = await deriveKey(keyMaterial, salt);
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+  const wrapped = await crypto.subtle.wrapKey(
+    "pkcs8",
+    key,
+    wrappingKey,
+    {
+      name: "AES-GCM",
+      iv: iv
+    }
+  );
+
+  return arrayBufferToBase64String(wrapped);
+};
+
+const serialize = async (context, password) => {
+  const copy = JSON.parse(JSON.stringify(context));
+
+  copy.keys.signing = {};
+  copy.keys.signing.privateKey = await serializeKey(context.keys.signing.privateKey, password);
+  copy.keys.signing.publicKey = await serializeKey(context.keys.signing.publicKey, password);
+  copy.keys.encryption = await serializeKey(context.keys.encryption, password);
+
+  return copy;
+};
+
+const deserialize = async (data, password) => {
+  const context = JSON.parse(data);
+
+  // todo replace keys with imports
+
+  return context;
+};
+
 const generateSigningPair = async () => {
   const pair = await crypto.subtle.generateKey(
     {
-      name: 'RSA-PSS',
+      name: 'RSASSA-PKCS1-v1_5',
       modulusLength: 4096,
       publicExponent: new Uint8Array([1, 0, 1]),
       hash: 'SHA-512',
@@ -26,7 +85,7 @@ const arrayBufferToBase64String = buffer => btoa(
     null,
     new Uint8Array(buffer)));
 
-const exportPublicKey = async (publicKey) => {
+const exportPublicPEM = async (publicKey) => {
   let exportedPublic;
   try {
     exportedPublic = await crypto.subtle.exportKey('spki', publicKey);
@@ -34,7 +93,11 @@ const exportPublicKey = async (publicKey) => {
     throw new Error(`Could not export public key: ${error}.`);
   }
 
-  return arrayBufferToBase64String(exportedPublic);
+  const key = arrayBufferToBase64String(exportedPublic)
+    .match(/.{1,64}/g)
+    .join('\n');
+
+  return `-----BEGIN PUBLIC KEY-----\n${key}\n-----END PUBLIC KEY-----`;
 };
 
 const aesParameters = () => ({
@@ -61,12 +124,15 @@ const contextWithKeys = (context, signing, encryption) => ({
   },
 });
 
+const contextWithKeyNames = (context, keyNames) => ({
+  ...context,
+  keyNames
+});
+
 const contextWithUserId = (context, userId) => ({
   ...context,
   userId
 });
-
-const createContextFrom = data => createContext();
 
 const isLoggedIn = context => context.userId !== undefined;
 
@@ -87,17 +153,21 @@ const register = async (context) => {
     throw new Error(`Could not generate encryption key: ${error}.`);
   }
 
+  // export
+  const key = await exportPublicPEM(signingKeys.publicKey);
+
   // create user
+  const headers = new Headers();
+  headers.append("Content-Type", "text/plain");
+
   let json;
   try {
     const res = await fetch(
       `${context.url}/user`,
       {
         method: 'post',
-        body: exportPublicKey(signingKeys.publicKey),
-        headers: {
-          contentType: 'application/json'
-        },
+        body: key,
+        headers,
       });
     json = await res.json();
   } catch (e) {
@@ -111,11 +181,78 @@ const register = async (context) => {
   );
 };
 
+const proveFetch = async (context, url, options) => {
+  let json;
+  try {
+    const res = await fetch(
+      `${context.url}/proof/${context.userId}`,
+      {
+        method: 'post',
+      }
+    );
+
+    json = await res.json();
+  } catch (error) {
+    throw new Error(`Could not fetch proof: ${error}.`);
+  }
+
+  const { success, error, value } = json;
+  if (!success) {
+    throw new Error(`Could not fetch proof: ${error}.`);
+  }
+
+  // sign
+  const signature = await crypto.subtle.sign(
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      saltLength: 32
+    },
+    context.keys.signing.privateKey,
+    new TextEncoder().encode(value));
+  const signatureString = arrayBufferToBase64String(signature);
+
+  // create headers object
+  if (!options) {
+    options = {};
+  }
+  if (!options.headers) {
+    options.headers = {};
+  }
+
+  // append proof + signature
+  options.headers['X-Nk-Proof'] = value;
+  options.headers['X-Nk-Proof-Sig'] = signatureString;
+
+  return await fetch(url, options);
+};
+
+const getKeys = async (context) => {
+  let json;
+  try {
+    const res = await proveFetch(
+      context,
+      `${context.url}/data/${context.userId}`
+    );
+
+    json = await res.json();
+  } catch (error) {
+    throw new Error(`Could not get keys: ${error}.`);
+  }
+
+  const { success, error, keys } = json;
+  if (!success) {
+    throw new Error(`Could not get keys: ${error}.`);
+  }
+
+  return contextWithKeyNames(context, keys);
+};
+
 const createData = async (context, keyName, value) => {
+  // create Uint8Array from value
   const enc = new TextEncoder();
   const encodedValue = enc.encode(value);
 
-  // encrypt
+  // encrypt with hard symmetric encryption
   let cipher;
   try {
     cipher = await crypto.subtle.encrypt(
@@ -132,11 +269,10 @@ const createData = async (context, keyName, value) => {
   try {
     signature = await window.crypto.subtle.sign(
       {
-        name: 'RSA-PSS',
-        saltLength: 32
+        name: 'RSASSA-PKCS1-v1_5',
       },
       context.keys.signing.privateKey,
-      enc.encode(cipher),
+      new Uint8Array(cipher),
     );
   } catch (error) {
     throw new Error(`Could not sign value: ${error}.`);
@@ -177,4 +313,4 @@ const createData = async (context, keyName, value) => {
   };
 };
 
-export { isLoggedIn, createContext, createContextFrom, register, createData };
+export { isLoggedIn, createContext, register, createData, getKeys, serialize, deserialize };
