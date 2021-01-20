@@ -1,3 +1,13 @@
+const uintBufferToBase64String = buffer => btoa(String.fromCharCode.apply(null, buffer));
+const arrayBufferToBase64String = buffer => uintBufferToBase64String(new Uint8Array(buffer));
+const base64StringToArrayBuffer = str => {
+  const bytes = new TextEncoder().encode(str);
+  const bytesAsArrayBuffer = new ArrayBuffer(bytes.length);
+  const bytesUint8 = new Uint8Array(bytesAsArrayBuffer);
+  bytesUint8.set(bytes);
+  return bytesAsArrayBuffer;
+};
+
 const getKeyMaterial = password => crypto.subtle.importKey(
   "raw",
   new TextEncoder().encode(password),
@@ -19,6 +29,30 @@ const deriveKey = (keyMaterial, salt, alg) => crypto.subtle.deriveKey(
   [ "wrapKey", "unwrapKey" ]
 );
 
+const deserializePrivateKey = async ({ bytes, salt, iv }, password) => {
+  const keyMaterial = await getKeyMaterial(password);
+  const saltBuffer = base64StringToArrayBuffer(salt);
+  const unwrappingKey = await deriveKey(keyMaterial, saltBuffer, 'AES-GCM');
+
+  const wrappedKeyBuffer = base64StringToArrayBuffer(bytes);
+  const ivBuffer = base64StringToArrayBuffer(iv);
+  return window.crypto.subtle.unwrapKey(
+    'pkcs8',
+    wrappedKeyBuffer,
+    unwrappingKey,
+    {
+      name: 'AES-GCM',
+      iv: ivBuffer
+    },
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-512'
+    },
+    true,
+    ['sign', 'verify']
+  );
+};
+
 const serializePrivateKey = async (key, password) => {
   const keyMaterial = await getKeyMaterial(password);
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -35,7 +69,11 @@ const serializePrivateKey = async (key, password) => {
     }
   );
 
-  return arrayBufferToBase64String(wrapped);
+  return {
+    iv: uintBufferToBase64String(iv),
+    salt: uintBufferToBase64String(salt),
+    bytes: arrayBufferToBase64String(wrapped),
+  };
 }
 
 const serializePublicKey = async (key, password) => {
@@ -54,7 +92,11 @@ const serializePublicKey = async (key, password) => {
     }
   );
 
-  return arrayBufferToBase64String(wrapped);
+  return {
+    iv: uintBufferToBase64String(iv),
+    salt: uintBufferToBase64String(salt),
+    bytes: arrayBufferToBase64String(wrapped),
+  };
 };
 
 const serializeEncryptionKey = async (key, password) => {
@@ -69,7 +111,10 @@ const serializeEncryptionKey = async (key, password) => {
     'AES-KW',
   );
 
-  return arrayBufferToBase64String(wrapped);
+  return {
+    salt: uintBufferToBase64String(salt),
+    bytes: arrayBufferToBase64String(wrapped),
+  };
 };
 
 const serialize = async (context, password) => {
@@ -94,13 +139,22 @@ const serialize = async (context, password) => {
     console.log('Could not serialize encryption key.', error)
   }
 
-  return copy;
+  return JSON.stringify(copy);
 };
 
 const deserialize = async (data, password) => {
   const context = JSON.parse(data);
 
-  // todo replace keys with imports
+  const { signing: { privateKey, publicKey }, encryption } = context.keys;
+  context.keys = {
+    signing: {},
+  };
+
+  try {
+    context.keys.signing.privateKey = await deserializePrivateKey(privateKey, password);
+  } catch (error) {
+    console.error(`Could not create private key: ${error}.`);
+  }
 
   return context;
 };
@@ -127,11 +181,6 @@ const generateSymmetricKey = async () => await crypto.subtle.generateKey(
   },
   true,
   ['encrypt', 'decrypt']);
-
-const arrayBufferToBase64String = buffer => btoa(
-  String.fromCharCode.apply(
-    null,
-    new Uint8Array(buffer)));
 
 const exportPublicPEM = async (publicKey) => {
   let exportedPublic;
