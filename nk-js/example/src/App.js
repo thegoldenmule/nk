@@ -1,14 +1,14 @@
 import './App.css';
 import { Button, Col, Container, Form, ListGroup, Navbar, Row } from 'react-bootstrap';
 import { useState } from 'react';
-import { createContext, isLoggedIn, register, createData, getKeys, serialize } from './nk-js';
+import { createContext, isLoggedIn, register, createData, getKeys, serialize, deserialize } from './nk-js';
 import 'codemirror/lib/codemirror.css';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
 import { Editor } from '@toast-ui/react-editor';
 import { ArrowSwitchIcon, PlusIcon } from '@primer/octicons-react';
 
-const ProfileView = ({ context, onCreateUser }) => {
+const ProfileView = ({ context, onCreateUser, onLogin }) => {
   return (
     <Container>
       <Row>
@@ -17,6 +17,16 @@ const ProfileView = ({ context, onCreateUser }) => {
             isLoggedIn(context)
               ? <p>{`Logged in. UserId: '${context.userId}'.`}</p>
               : <Button onClick={() => onCreateUser()}>Create Account</Button>
+          }
+        </Col>
+        <Col>
+          {
+            !isLoggedIn(context) && (
+              <Button
+                onClick={() => onLogin('111111')}
+              >Login
+              </Button>
+            )
           }
         </Col>
       </Row>
@@ -97,6 +107,11 @@ function App() {
         <Row>
           <ProfileView
             context={context}
+            onLogin={async password => {
+              const contextData = localStorage.getItem('_context');
+              const newContext = deserialize(contextData, password);
+              setContext(newContext);
+            }}
             onCreateUser={async () => {
               const newContext = await register(context);
               setContext(newContext);
@@ -105,7 +120,7 @@ function App() {
               const serialized = await serialize(newContext, '111111');
 
               // save!
-              localStorage.setItem("_context", serialized);
+              localStorage.setItem('_context', serialized);
             }}
           />
         </Row>
