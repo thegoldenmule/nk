@@ -1,4 +1,4 @@
-const getKeyMaterial = async password => await crypto.subtle.importKey(
+const getKeyMaterial = password => crypto.subtle.importKey(
   "raw",
   new TextEncoder().encode(password),
   { name: 'PBKDF2' },
@@ -6,7 +6,7 @@ const getKeyMaterial = async password => await crypto.subtle.importKey(
   ["deriveBits", "deriveKey"]
 );
 
-const deriveKey = async (keyMaterial, salt) => await crypto.subtle.deriveKey(
+const deriveKey = (keyMaterial, salt, alg) => crypto.subtle.deriveKey(
   {
     "name": "PBKDF2",
     salt,
@@ -14,25 +14,59 @@ const deriveKey = async (keyMaterial, salt) => await crypto.subtle.deriveKey(
     "hash": "SHA-256"
   },
   keyMaterial,
-  { "name": "AES-KW", "length": 256},
+  { "name": alg, "length": 256},
   true,
   [ "wrapKey", "unwrapKey" ]
 );
 
-const serializeKey = async (key, password) => {
+const serializePrivateKey = async (key, password) => {
   const keyMaterial = await getKeyMaterial(password);
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const wrappingKey = await deriveKey(keyMaterial, salt);
+  const wrappingKey = await deriveKey(keyMaterial, salt, 'AES-GCM');
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
   const wrapped = await crypto.subtle.wrapKey(
-    "pkcs8",
+    'pkcs8',
     key,
     wrappingKey,
     {
-      name: "AES-GCM",
-      iv: iv
+      name: 'AES-GCM',
+      iv
     }
+  );
+
+  return arrayBufferToBase64String(wrapped);
+}
+
+const serializePublicKey = async (key, password) => {
+  const keyMaterial = await getKeyMaterial(password);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const wrappingKey = await deriveKey(keyMaterial, salt, 'AES-CBC');
+  const iv = window.crypto.getRandomValues(new Uint8Array(16));
+
+  const wrapped = await crypto.subtle.wrapKey(
+    'spki',
+    key,
+    wrappingKey,
+    {
+      name: 'AES-CBC',
+      iv
+    }
+  );
+
+  return arrayBufferToBase64String(wrapped);
+};
+
+const serializeEncryptionKey = async (key, password) => {
+  const keyMaterial = await getKeyMaterial(password);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const wrappingKey = await deriveKey(keyMaterial, salt, 'AES-KW');
+
+  const wrapped = await crypto.subtle.wrapKey(
+    'raw',
+    key,
+    wrappingKey,
+    'AES-KW',
   );
 
   return arrayBufferToBase64String(wrapped);
@@ -42,9 +76,23 @@ const serialize = async (context, password) => {
   const copy = JSON.parse(JSON.stringify(context));
 
   copy.keys.signing = {};
-  copy.keys.signing.privateKey = await serializeKey(context.keys.signing.privateKey, password);
-  copy.keys.signing.publicKey = await serializeKey(context.keys.signing.publicKey, password);
-  copy.keys.encryption = await serializeKey(context.keys.encryption, password);
+  try {
+    copy.keys.signing.privateKey = await serializePrivateKey(context.keys.signing.privateKey, password);
+  } catch (error) {
+    console.log('Could not serialize private key.', error);
+  }
+
+  try {
+    copy.keys.signing.publicKey = await serializePublicKey(context.keys.signing.publicKey, password);
+  } catch (error) {
+    console.log('Could not serialize public key.', error);
+  }
+
+  try {
+    copy.keys.encryption = await serializeEncryptionKey(context.keys.encryption, password);
+  } catch (error) {
+    console.log('Could not serialize encryption key.', error)
+  }
 
   return copy;
 };
