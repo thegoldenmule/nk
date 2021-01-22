@@ -1,12 +1,74 @@
+var Base64Binary = {
+  _keyStr : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+
+  /* will return a  Uint8Array type */
+  decodeArrayBuffer: function(input) {
+    var bytes = (input.length/4) * 3;
+    var ab = new ArrayBuffer(bytes);
+    this.decode(input, ab);
+
+    return ab;
+  },
+
+  removePaddingChars: function(input){
+    var lkey = this._keyStr.indexOf(input.charAt(input.length - 1));
+    if(lkey == 64){
+      return input.substring(0,input.length - 1);
+    }
+    return input;
+  },
+
+  decode: function (input, arrayBuffer) {
+    //get last chars to see if are valid
+    input = this.removePaddingChars(input);
+    input = this.removePaddingChars(input);
+
+    var bytes = parseInt((input.length / 4) * 3, 10);
+
+    var uarray;
+    var chr1, chr2, chr3;
+    var enc1, enc2, enc3, enc4;
+    var i = 0;
+    var j = 0;
+
+    if (arrayBuffer)
+      uarray = new Uint8Array(arrayBuffer);
+    else
+      uarray = new Uint8Array(bytes);
+
+    input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+
+    for (i=0; i<bytes; i+=3) {
+      //get the 3 octects in 4 ascii chars
+      enc1 = this._keyStr.indexOf(input.charAt(j++));
+      enc2 = this._keyStr.indexOf(input.charAt(j++));
+      enc3 = this._keyStr.indexOf(input.charAt(j++));
+      enc4 = this._keyStr.indexOf(input.charAt(j++));
+
+      chr1 = (enc1 << 2) | (enc2 >> 4);
+      chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+      chr3 = ((enc3 & 3) << 6) | enc4;
+
+      uarray[i] = chr1;
+      if (enc3 != 64) uarray[i+1] = chr2;
+      if (enc4 != 64) uarray[i+2] = chr3;
+    }
+
+    return uarray;
+  }
+}
+
 const uintBufferToBase64String = buffer => btoa(String.fromCharCode.apply(null, buffer));
 const arrayBufferToBase64String = buffer => uintBufferToBase64String(new Uint8Array(buffer));
-const base64StringToArrayBuffer = str => {
-  const bytes = new TextEncoder().encode(str);
-  const bytesAsArrayBuffer = new ArrayBuffer(bytes.length);
-  const bytesUint8 = new Uint8Array(bytesAsArrayBuffer);
-  bytesUint8.set(bytes);
-  return bytesAsArrayBuffer;
-};
+const base64StringToUintBuffer = str => {
+  const binary = atob(str);
+  const bytes = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return bytes;
+}
 
 const getKeyMaterial = password => crypto.subtle.importKey(
   "raw",
@@ -30,73 +92,41 @@ const deriveKey = (keyMaterial, salt, alg) => crypto.subtle.deriveKey(
 );
 
 const deserializePrivateKey = async ({ bytes, salt, iv }, password) => {
-  const keyMaterial = await getKeyMaterial(password);
-  const saltBuffer = base64StringToArrayBuffer(salt);
-  const unwrappingKey = await deriveKey(keyMaterial, saltBuffer, 'AES-GCM');
+  const keyBuffer = Base64Binary.decodeArrayBuffer(bytes);
 
-  const wrappedKeyBuffer = base64StringToArrayBuffer(bytes);
-  const ivBuffer = base64StringToArrayBuffer(iv);
-  return window.crypto.subtle.unwrapKey(
-    'pkcs8',
-    wrappedKeyBuffer,
-    unwrappingKey,
-    {
-      name: 'AES-GCM',
-      iv: ivBuffer
-    },
+  return crypto.subtle.importKey(
+    "pkcs8",
+    keyBuffer,
     {
       name: 'RSASSA-PKCS1-v1_5',
-      hash: 'SHA-512'
+      modulusLength: 4096,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: 'SHA-512',
     },
     true,
-    ['sign', 'verify']
-  );
+    ['sign', 'verify']);
 };
 
 const serializePrivateKey = async (key, password) => {
-  const keyMaterial = await getKeyMaterial(password);
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const wrappingKey = await deriveKey(keyMaterial, salt, 'AES-GCM');
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  // TODO: encrypt
+  const exportKey = await crypto.subtle.exportKey("pkcs8", key);
 
-  const wrapped = await crypto.subtle.wrapKey(
-    'pkcs8',
-    key,
-    wrappingKey,
-    {
-      name: 'AES-GCM',
-      iv
-    }
-  );
-
-  return {
-    iv: uintBufferToBase64String(iv),
-    salt: uintBufferToBase64String(salt),
-    bytes: arrayBufferToBase64String(wrapped),
+  const payload = {
+    bytes: arrayBufferToBase64String(exportKey),
   };
+
+  return payload;
 }
 
 const serializePublicKey = async (key, password) => {
-  const keyMaterial = await getKeyMaterial(password);
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const wrappingKey = await deriveKey(keyMaterial, salt, 'AES-CBC');
-  const iv = window.crypto.getRandomValues(new Uint8Array(16));
+  // TODO: encrypt
+  const exportKey = await crypto.subtle.exportKey("spki", key);
 
-  const wrapped = await crypto.subtle.wrapKey(
-    'spki',
-    key,
-    wrappingKey,
-    {
-      name: 'AES-CBC',
-      iv
-    }
-  );
-
-  return {
-    iv: uintBufferToBase64String(iv),
-    salt: uintBufferToBase64String(salt),
-    bytes: arrayBufferToBase64String(wrapped),
+  const payload = {
+    bytes: arrayBufferToBase64String(exportKey),
   };
+
+  return payload;
 };
 
 const serializeEncryptionKey = async (key, password) => {
@@ -211,6 +241,7 @@ const createContext = () => ({
     encryption: undefined,
   },
   keyNames: [],
+  values: {}
 });
 
 const contextWithKeys = (context, signing, encryption) => ({
@@ -223,13 +254,21 @@ const contextWithKeys = (context, signing, encryption) => ({
 
 const contextWithKeyNames = (context, keyNames) => ({
   ...context,
-  keyNames
+  keyNames: [...new Set(keyNames)],
 });
 
 const contextWithUserId = (context, userId) => ({
   ...context,
-  userId
+  userId,
 });
+
+const contextWithValue = (context, keyName, value) => contextWithKeyNames({
+  ...context,
+  values: {
+    ...context.values,
+    [keyName]: value
+  }
+}, [...context.keyNames, keyName]);
 
 const isLoggedIn = context => context.userId !== undefined;
 
@@ -344,7 +383,7 @@ const getKeys = async (context) => {
   return contextWithKeyNames(context, keys);
 };
 
-const createData = async (context, keyName, value) => {
+const encrypt = async (context, value) => {
   // create Uint8Array from value
   const enc = new TextEncoder();
   const encodedValue = enc.encode(value);
@@ -375,8 +414,14 @@ const createData = async (context, keyName, value) => {
     throw new Error(`Could not sign value: ${error}.`);
   }
 
-  const cipherTextString = arrayBufferToBase64String(cipher);
-  const signatureString = arrayBufferToBase64String(signature);
+  return {
+    value: arrayBufferToBase64String(cipher),
+    signature: arrayBufferToBase64String(signature),
+  }
+}
+
+const createData = async (context, keyName, value) => {
+  const { value: cipherValue, signature } = await encrypt(context, value);
 
   // send
   let json;
@@ -386,8 +431,8 @@ const createData = async (context, keyName, value) => {
         method: 'post',
         body: JSON.stringify({
           Key: keyName,
-          Payload: cipherTextString,
-          Sig: signatureString,
+          Payload: cipherValue,
+          Sig: signature,
         }),
         headers: {
           'Content-Type': 'application/json',
@@ -404,10 +449,39 @@ const createData = async (context, keyName, value) => {
     throw new Error('Could not create data: server returned false.');
   }
 
-  return {
-    ...context,
-    keyNames: [...context.keyNames, keyName],
-  };
+  return contextWithValue(context, keyName, value);
 };
 
-export { isLoggedIn, createContext, register, createData, getKeys, serialize, deserialize };
+const updateData = async (context, keyName, value) => {
+  const { value: cipherValue, signature } = await encrypt(context, value);
+
+  // send
+  let json;
+  try {
+    const res = await fetch(`${context.url}/data/${context.userId}/${keyName}`,
+      {
+        method: 'put',
+        body: JSON.stringify({
+          Key: keyName,
+          Payload: cipherValue,
+          Sig: signature,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+    json = await res.json();
+  } catch (error) {
+    throw new Error(`Could not update data: ${error}.`);
+  }
+
+  if (!json.success) {
+    throw new Error('Could not update data: server returned false.');
+  }
+
+  return contextWithValue(context, keyName, value);
+};
+
+export { isLoggedIn, createContext, register, createData, updateData, getKeys, serialize, deserialize };
