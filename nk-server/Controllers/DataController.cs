@@ -221,7 +221,7 @@ namespace TheGoldenMule.Nk.Controllers
 
         [HttpGet]
         [Route("{userId}/{key}")]
-        public async Task<GetDataResponse> Get(string userId, string key)
+        public Task<GetDataResponse> Get(string userId, string key)
         {
             // TODO: verify proof
 
