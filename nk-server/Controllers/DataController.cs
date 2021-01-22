@@ -221,12 +221,12 @@ namespace TheGoldenMule.Nk.Controllers
 
         [HttpGet]
         [Route("{userId}/{key}")]
-        public Task<GetDataResponse> Get(string userId, string key)
+        public async Task<GetDataResponse> Get(string userId, string key)
         {
             // TODO: verify proof
 
             // now look up the data
-            var data = _db.Data.Single(d => d.UserId == userId && d.Key == key);
+            var data = await _db.Data.SingleAsync(d => d.UserId == userId && d.Key == key);
 
             return new GetDataResponse
             {
