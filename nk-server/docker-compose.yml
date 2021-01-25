@@ -3,6 +3,12 @@ version: '3.1'
 
 services:
 
+  nk:
+    image: thegoldenmule/nk-server
+    restart: always
+    ports:
+      - 80:80
+
   db:
     image: postgres
     restart: always
