@@ -1,5 +1,15 @@
 import './App.css';
-import { Button, ButtonGroup, Col, Container, Form, InputGroup, ListGroup, Navbar, Row } from 'react-bootstrap';
+import {
+  Button,
+  Col,
+  Container,
+  Form, FormControl, InputGroup,
+  ListGroup,
+  Nav,
+  Navbar,
+  Row,
+  Spinner
+} from 'react-bootstrap';
 import { useRef, useState } from 'react';
 import { createContext, isLoggedIn, register, createData, getKeys, serialize, deserialize, updateData } from './nk-js';
 import 'codemirror/lib/codemirror.css';
@@ -7,8 +17,8 @@ import '@toast-ui/editor/dist/toastui-editor.css';
 
 import { Editor } from '@toast-ui/react-editor';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faDownload, faPlus, faSave } from '@fortawesome/free-solid-svg-icons';
-import { FileBadgeIcon } from '@primer/octicons-react';
+import { faDownload, faPlus, faSave, faSearch, faTrash } from '@fortawesome/free-solid-svg-icons';
+import ProfileView from './profile';
 
 // taken from https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
 const newKey = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -22,33 +32,6 @@ const newNote = () => ({
 });
 const valueToNote = value => JSON.stringify(value);
 const noteToValue = note => JSON.stringify(note);
-
-const ProfileView = ({ context, onCreateUser, onLogin }) => {
-  return (
-    <Container>
-      <Row>
-        <Col>
-          {
-            isLoggedIn(context)
-              ? <p>{`Logged in. UserId: '${context.userId}'.`}</p>
-              : <Button onClick={() => onCreateUser()}>Create Account</Button>
-          }
-        </Col>
-        <Col>
-          {
-            !isLoggedIn(context) && (
-              <Button
-                disabled
-                onClick={() => onLogin('111111')}
-              >Login
-              </Button>
-            )
-          }
-        </Col>
-      </Row>
-    </Container>
-  )
-};
 
 const TextEditor = ({ activeNote, note = {}, onSave }) => {
   const { title, body } = note;
@@ -147,70 +130,77 @@ function App() {
   const { keyNames, values } = context;
   const note = valueToNote(values[activeKey]);
 
+  const onLogin = async password => {
+    const contextData = localStorage.getItem('_context');
+    const newContext = deserialize(contextData, password);
+    setContext(newContext);
+  };
+
+  const onCreateUser = async () => {
+    const newContext = await register(context);
+    setContext(newContext);
+
+    // TODO: ask for passphrase
+    const serialized = await serialize(newContext, '111111');
+
+    // save!
+    localStorage.setItem('_context', serialized);
+  };
+
   return (
-    <div style={{ paddingTop: '20px' }}>
-      <Container>
-        <Row className="p-2">
-          <Navbar>
-            <Navbar.Brand>Nk-js Example</Navbar.Brand>
-          </Navbar>
-        </Row>
-        <Row className="p-2">
-          <ProfileView
-            context={context}
-            onLogin={async password => {
-              const contextData = localStorage.getItem('_context');
-              const newContext = deserialize(contextData, password);
-              setContext(newContext);
-            }}
-            onCreateUser={async () => {
-              const newContext = await register(context);
-              setContext(newContext);
+    <Container className={'h-100 mh-100'}>
+      <ProfileView
+        context={context}
+        onLogin={onLogin}
+        onLogout={() => {
+          // TODO
+        }}
+        onCreateUser={onCreateUser}
+      />
 
-              // TODO: ask for passphrase
-              const serialized = await serialize(newContext, '111111');
+      <Row className={'p-2 h-100'}>
+        <Col className={'p-2'} xs={4}>
 
-              // save!
-              localStorage.setItem('_context', serialized);
-            }}
+          <div className={'pb-4'}>
+            <InputGroup>
+              <FormControl type={'text'} placeholder={'Search'} size={'lg'} />
+              <InputGroup.Append>
+                <Button variant={'outline-success'}><FontAwesomeIcon icon={faSearch} /></Button>
+              </InputGroup.Append>
+            </InputGroup>
+          </div>
+
+          <ListGroup>
+            <ListGroup.Item>Interview Notes</ListGroup.Item>
+            <ListGroup.Item>Server Tasks</ListGroup.Item>
+            <ListGroup.Item>Individual Goals</ListGroup.Item>
+            <ListGroup.Item>Backpacking</ListGroup.Item>
+            <ListGroup.Item>Performance Review: Teresa</ListGroup.Item>
+            <ListGroup.Item>Nk</ListGroup.Item>
+            <ListGroup.Item>Performance Review: Alan</ListGroup.Item>
+          </ListGroup>
+        </Col>
+
+        <Col className={'p-2 h-100'}>
+          <div className={'pb-4'}>
+            <Form.Control
+              size="lg"
+              type="text"
+              placeholder="Title"
+              value='This is my title.'
+            />
+          </div>
+          <Editor
+            initialValue={'This is my story.'}
+            placeholder="Start writing"
+            previewStyle="vertical"
+            height="100px"
+            initialEditType="wysiwyg"
+            useCommandShortcut={true}
           />
-        </Row>
-        {
-          isLoggedIn(context) && (
-            <Row className="p-2">
-              <Col xs={3} className="p-2">
-                <FileBrowser
-                  notes={keyNames}
-                  activeNote={activeKey}
-                  onCreateNote={async () => {
-                    const key = newKey();
-                    const newContext = await createData(context, key, noteToValue(newNote()));
-
-                    setContext(newContext);
-                    setActiveKey(key);
-                  }}
-                  onRefreshNotes={async() => {
-                    const newContext = await getKeys(context);
-                    setContext(newContext);
-                  }}
-                  onNoteSelected={note => setActiveKey(note)}
-                />
-              </Col>
-              <Col className="p-2">
-                <TextEditor
-                  activeNote={activeKey}
-                  note={note}
-                  onSave={async updatedNote => {
-                    const newContext = await updateData(context, activeKey, noteToValue(updatedNote))
-                    setContext(newContext);
-                  }}
-                />
-              </Col>
-            </Row>
-          )
-        }
-      </Container>
-    </div>
+        </Col>
+      </Row>
+    </Container>
   );
 }
 
