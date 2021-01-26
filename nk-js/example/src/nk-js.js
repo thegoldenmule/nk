@@ -234,7 +234,7 @@ const aesParameters = () => ({
 });
 
 const createContext = () => ({
-  url: 'http://localhost:5000',
+  url: 'https://nk-server.thegoldenmule.com',
   userId: undefined,
   keys: {
     signing: undefined,
@@ -242,6 +242,11 @@ const createContext = () => ({
   },
   keyNames: [],
   values: {}
+});
+
+const contextWithConfig = (context, { url }) => ({
+  ...context,
+  url
 });
 
 const contextWithKeys = (context, signing, encryption) => ({
@@ -484,4 +489,4 @@ const updateData = async (context, keyName, value) => {
   return contextWithValue(context, keyName, value);
 };
 
-export { isLoggedIn, createContext, register, createData, updateData, getKeys, serialize, deserialize };
+export { createContext, contextWithConfig, isLoggedIn, register, createData, updateData, getKeys, serialize, deserialize };
