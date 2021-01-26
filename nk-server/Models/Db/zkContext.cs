@@ -23,7 +23,7 @@ namespace TheGoldenMule.Nk.Models.Db
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseNpgsql("Host=db;Database=zk;Username=postgres;Password=example");
+                optionsBuilder.UseNpgsql("Server=db;Database=nk;Username=postgres;Password=example");
             }
         }
 
