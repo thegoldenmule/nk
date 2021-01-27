@@ -4,7 +4,7 @@ import {
   Col,
   Container,
   Form, FormControl, InputGroup,
-  ListGroup,
+  ListGroup, ListGroupItem,
   Nav,
   Navbar, OverlayTrigger,
   Row,
@@ -26,10 +26,9 @@ const newKey = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c =
   return v.toString(16);
 });
 
-const newNote = () => ({
-  title: '',
-  body: '',
-});
+const noteFromParameters = ({ title, body }) => ({ title, body });
+const newNote = () => noteFromParameters({ title: 'New Note', body: '' });
+
 const valueToNote = value => JSON.stringify(value);
 const noteToValue = note => JSON.stringify(note);
 
@@ -45,79 +44,94 @@ const TextEditor = ({ activeNote, note = {}, onSave }) => {
   }
 
   return (
-    <Container className={"p-2"}>
-      <Row className={"p-2"}>
-        <Col>
-          <Button
-            onClick={async () => onSave({ title: draftTitle, body: draftBody })}
-          >
-            <FontAwesomeIcon icon={faSave} />
-          </Button>
-        </Col>
-      </Row>
-      <Row className={"p-2"}>
-        <Col>
-          <Form>
-            <Form.Control
-              size="lg"
-              type="text"
-              placeholder="Title"
-              value={title}
-              onChange={evt => setDraftTitle(evt.target.value)}
-            />
-          </Form>
-        </Col>
-      </Row>
-      <Row className={"p-2"}>
-        <Col>
-          <Editor
-            ref={ref}
-            initialValue={body}
-            placeholder="Start writing"
-            previewStyle="vertical"
-            height="600px"
-            initialEditType="wysiwyg"
-            useCommandShortcut={true}
-            onChange={() => setDraftBody(ref.current.getInstance().getMarkdown())}
-          />
-        </Col>
-      </Row>
-    </Container>
+    <div>
+      <div className={'pb-4'}>
+        <Form.Control
+          size={'lg'}
+          type={'text'}
+          placeholder={'Title'}
+          value={draftTitle}
+          onChange={evt => setDraftTitle(evt.target.value)}
+        />
+      </div>
+      <div className={'pb-4'}>
+        <ButtonToolbar className={'justify-content-between'}>
+          <ButtonGroup>
+            <OverlayTrigger overlay={(
+              <Tooltip id={'tt-save'}>Save</Tooltip>
+            )}>
+              <Button
+                onClick={() => onSave(noteFromParameters({ title: draftTitle, body: draftBody }))}
+              ><FontAwesomeIcon icon={faSave} /></Button>
+            </OverlayTrigger>
+            <OverlayTrigger overlay={(
+              <Tooltip id={'tt-copy'}>Copy</Tooltip>
+            )}>
+              <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faCopy} /></Button>
+            </OverlayTrigger>
+          </ButtonGroup>
+          <ButtonGroup>
+            <OverlayTrigger overlay={(
+              <Tooltip id={'tt-delete'}>Delete</Tooltip>
+            )}>
+              <Button variant={'outline-danger'}><FontAwesomeIcon icon={faTrash} /></Button>
+            </OverlayTrigger>
+          </ButtonGroup>
+        </ButtonToolbar>
+      </div>
+
+      <Editor
+        ref={ref}
+        initialValue={draftBody}
+        placeholder='Start writing'
+        previewStyle='vertical'
+        height='600px'
+        initialEditType='wysiwyg'
+        useCommandShortcut={true}
+        onChange={() => setDraftBody(ref.current.getInstance().getMarkdown())}
+      />
+    </div>
   )
 }
 
 const FileBrowser = ({
-  notes, activeNote,
-  onCreateNote, onRefreshNotes, onNoteSelected
+  notes = {}, activeNote, onCreateNote, onNoteSelected,
 }) => {
+  const listItems = [(
+    <ListGroup.Item key={'__new__'}>
+      <Button
+        variant={'outline-success'}
+        onClick={() => onCreateNote()}
+      >+ New Note</Button>
+    </ListGroup.Item>
+  )];
+
+  for (const [k, v] of Object.entries(notes)) {
+    listItems.push(
+      <ListGroup.Item
+        key={k}
+        active={activeNote === k}
+        onClick={() => onNoteSelected(k)}
+      >
+        {k}
+      </ListGroup.Item>);
+  }
+
   return (
-    <Container className={"p-2"}>
-      <Row className={"p-2"}>
-        <Button
-          onClick={onCreateNote}
-        ><FontAwesomeIcon icon={faPlus} /></Button>
-        <Button
-          variant='secondary'
-          onClick={onRefreshNotes}
-        ><FontAwesomeIcon icon={faDownload} /></Button>
-      </Row>
-      <Row className={"p-2"}>
-        <ListGroup>
-          {
-            notes.map((note, i) => (
-              <ListGroup.Item
-                key={i}
-                action
-                active={note === activeNote}
-                onClick={() => onNoteSelected(note)}
-              >
-                {note}
-              </ListGroup.Item>
-            ))
-          }
-        </ListGroup>
-      </Row>
-    </Container>
+    <div>
+      <div className={'pb-4'}>
+        <InputGroup>
+          <FormControl type={'text'} placeholder={'Search'} size={'lg'} />
+          <InputGroup.Append>
+            <Button variant={'outline-success'}><FontAwesomeIcon icon={faSearch} /></Button>
+          </InputGroup.Append>
+        </InputGroup>
+      </div>
+
+      <ListGroup>
+        {listItems}
+      </ListGroup>
+    </div>
   );
 };
 
@@ -147,6 +161,19 @@ function App() {
     localStorage.setItem('_context', serialized);
   };
 
+  const onCreateNote = async () => {
+    const key = newKey();
+    const newContext = await createData(context, key, noteToValue(newNote()));
+
+    setContext(newContext);
+    setActiveKey(key);
+  };
+
+  const onSave = async updatedNote => {
+    const newContext = await updateData(context, activeKey, noteToValue(updatedNote));
+    setContext(newContext);
+  };
+
   return (
     <Container className={'h-100 mh-100'}>
       <ProfileView
@@ -160,66 +187,19 @@ function App() {
 
       <Row className={'p-2 h-100'}>
         <Col className={'p-2'} xs={4}>
-
-          <div className={'pb-4'}>
-            <InputGroup>
-              <FormControl type={'text'} placeholder={'Search'} size={'lg'} />
-              <InputGroup.Append>
-                <Button variant={'outline-success'}><FontAwesomeIcon icon={faSearch} /></Button>
-              </InputGroup.Append>
-            </InputGroup>
-          </div>
-
-          <ListGroup>
-            <ListGroup.Item>Interview Notes</ListGroup.Item>
-            <ListGroup.Item>Server Tasks</ListGroup.Item>
-            <ListGroup.Item>Individual Goals</ListGroup.Item>
-            <ListGroup.Item>Backpacking</ListGroup.Item>
-            <ListGroup.Item>Performance Review: Teresa</ListGroup.Item>
-            <ListGroup.Item>Nk</ListGroup.Item>
-            <ListGroup.Item>Performance Review: Alan</ListGroup.Item>
-          </ListGroup>
+          <FileBrowser
+            notes={values}
+            activeNote={activeKey}
+            onCreateNote={onCreateNote}
+            onNoteSelected={setActiveKey}
+          />
         </Col>
 
         <Col className={'p-2 h-100'}>
-          <div className={'pb-4'}>
-            <Form.Control
-              size="lg"
-              type="text"
-              placeholder="Title"
-              value='This is my title.'
-            />
-          </div>
-          <div className={'pb-4'}>
-            <ButtonToolbar className={'justify-content-between'}>
-              <ButtonGroup>
-                <OverlayTrigger overlay={(
-                  <Tooltip id={'tt-save'}>Save</Tooltip>
-                )}>
-                  <Button><FontAwesomeIcon icon={faSave} /></Button>
-                </OverlayTrigger>
-                <OverlayTrigger overlay={(
-                  <Tooltip id={'tt-copy'}>Copy</Tooltip>
-                )}>
-                  <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faCopy} /></Button>
-                </OverlayTrigger>
-              </ButtonGroup>
-              <ButtonGroup>
-                <OverlayTrigger overlay={(
-                  <Tooltip id={'tt-delete'}>Delete</Tooltip>
-                )}>
-                  <Button variant={'outline-danger'}><FontAwesomeIcon icon={faTrash} /></Button>
-                </OverlayTrigger>
-              </ButtonGroup>
-            </ButtonToolbar>
-          </div>
-          <Editor
-            initialValue={'This is my story.'}
-            placeholder="Start writing"
-            previewStyle="vertical"
-            height="80%"
-            initialEditType="wysiwyg"
-            useCommandShortcut={true}
+          <TextEditor
+            activeNote={activeKey}
+            note={note}
+            onSave={onSave}
           />
         </Col>
       </Row>
