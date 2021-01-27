@@ -1,14 +1,14 @@
 import './App.css';
 import {
-  Button,
+  Button, ButtonGroup, ButtonToolbar,
   Col,
   Container,
   Form, FormControl, InputGroup,
   ListGroup,
   Nav,
-  Navbar,
+  Navbar, OverlayTrigger,
   Row,
-  Spinner
+  Spinner, Tooltip
 } from 'react-bootstrap';
 import { useRef, useState } from 'react';
 import { createContext, isLoggedIn, register, createData, getKeys, serialize, deserialize, updateData } from './nk-js';
@@ -17,7 +17,7 @@ import '@toast-ui/editor/dist/toastui-editor.css';
 
 import { Editor } from '@toast-ui/react-editor';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faDownload, faPlus, faSave, faSearch, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faCopy, faDownload, faPlus, faSave, faSearch, faTrash } from '@fortawesome/free-solid-svg-icons';
 import ProfileView from './profile';
 
 // taken from https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
@@ -190,11 +190,34 @@ function App() {
               value='This is my title.'
             />
           </div>
+          <div className={'pb-4'}>
+            <ButtonToolbar className={'justify-content-between'}>
+              <ButtonGroup>
+                <OverlayTrigger overlay={(
+                  <Tooltip id={'tt-save'}>Save</Tooltip>
+                )}>
+                  <Button><FontAwesomeIcon icon={faSave} /></Button>
+                </OverlayTrigger>
+                <OverlayTrigger overlay={(
+                  <Tooltip id={'tt-copy'}>Copy</Tooltip>
+                )}>
+                  <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faCopy} /></Button>
+                </OverlayTrigger>
+              </ButtonGroup>
+              <ButtonGroup>
+                <OverlayTrigger overlay={(
+                  <Tooltip id={'tt-delete'}>Delete</Tooltip>
+                )}>
+                  <Button variant={'outline-danger'}><FontAwesomeIcon icon={faTrash} /></Button>
+                </OverlayTrigger>
+              </ButtonGroup>
+            </ButtonToolbar>
+          </div>
           <Editor
             initialValue={'This is my story.'}
             placeholder="Start writing"
             previewStyle="vertical"
-            height="100px"
+            height="80%"
             initialEditType="wysiwyg"
             useCommandShortcut={true}
           />
