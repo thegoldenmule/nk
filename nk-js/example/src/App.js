@@ -6,7 +6,7 @@ import {
   Row
 } from 'react-bootstrap';
 import { useEffect, useState } from 'react';
-import { createContext, register, createData, serialize, deserialize, updateData, isLoggedIn } from './nk-js';
+import { createContext, register, createData, serialize, deserialize, updateData, isLoggedIn, getKeys } from './nk-js';
 import 'codemirror/lib/codemirror.css';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
@@ -31,11 +31,10 @@ function App() {
   const onLogin = async () => {
     const contextData = localStorage.getItem('_context');
     if (contextData) {
-      const newContext = await deserialize(contextData, '111111');
+      let newContext = await deserialize(contextData, '111111');
+      newContext = await getKeys(newContext);
+
       setContext(newContext);
-
-      // todo update keys asynchronously
-
     }
   };
 
