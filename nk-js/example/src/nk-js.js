@@ -1,5 +1,3 @@
-import decodeArrayBuffer from './base64-util';
-
 const uintBufferToBase64String = buffer => btoa(String.fromCharCode.apply(null, buffer));
 const arrayBufferToBase64String = buffer => uintBufferToBase64String(new Uint8Array(buffer));
 const base64StringToUintBuffer = str => {
@@ -11,6 +9,20 @@ const base64StringToUintBuffer = str => {
 
   return bytes;
 }
+
+const arrayBufferToString = buf => {
+  return String.fromCharCode.apply(null, new Uint16Array(buf));
+};
+
+const stringToArrayBuffer = str => {
+  const buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
+  const bufView = new Uint16Array(buf);
+  for (let i = 0, strLen = str.length; i < strLen; i++) {
+    bufView[i] = str.charCodeAt(i);
+  }
+
+  return buf;
+};
 
 const getKeyMaterial = password => crypto.subtle.importKey(
   "raw",
@@ -33,20 +45,64 @@ const deriveKey = (keyMaterial, salt, alg) => crypto.subtle.deriveKey(
   [ "wrapKey", "unwrapKey" ]
 );
 
-const deserializePrivateKey = async ({ bytes, salt, iv }, password) => {
-  const keyBuffer = decodeArrayBuffer(bytes);
+const deserializePrivateKey = async ({ bytes }, password) => {
+  const str2ab = (str) => {
+    const buf = new ArrayBuffer(str.length);
+    const bufView = new Uint8Array(buf);
+    for (let i = 0, strLen = str.length; i < strLen; i++) {
+      bufView[i] = str.charCodeAt(i);
+    }
+    return buf;
+  };
+
+  // todo: decrypt bytes
+
+  const binaryDerString = window.atob(bytes);
+  const binaryDer = str2ab(binaryDerString);
 
   return crypto.subtle.importKey(
     "pkcs8",
-    keyBuffer,
+    binaryDer,
     {
       name: 'RSASSA-PKCS1-v1_5',
-      modulusLength: 4096,
-      publicExponent: new Uint8Array([1, 0, 1]),
       hash: 'SHA-512',
     },
     true,
-    ['sign', 'verify']);
+    ['sign']);
+};
+
+async function getUnwrappingKey(password, saltBuffer) {
+  const keyMaterial = await getKeyMaterial(password);
+
+  return window.crypto.subtle.deriveKey(
+    {
+      "name": "PBKDF2",
+      salt: saltBuffer,
+      "iterations": 100000,
+      "hash": "SHA-256"
+    },
+    keyMaterial,
+    { "name": "AES-KW", "length": 256},
+    true,
+    [ "wrapKey", "unwrapKey" ]
+  );
+}
+
+const deserializeEncryptionKey = async ({ salt, bytes }, password) => {
+  const saltBuffer = new Uint8Array(stringToArrayBuffer(salt));
+  const wrappedKeyBuffer = stringToArrayBuffer(bytes);
+
+  const unwrappingKey = await getUnwrappingKey(password, saltBuffer);
+
+  return window.crypto.subtle.unwrapKey(
+    "raw",
+    wrappedKeyBuffer,
+    unwrappingKey,
+    "AES-KW",
+    "AES-GCM",
+    true,
+    ["encrypt", "decrypt"]
+  );
 };
 
 const serializePrivateKey = async (key, password) => {
@@ -60,17 +116,6 @@ const serializePrivateKey = async (key, password) => {
   return payload;
 }
 
-const serializePublicKey = async (key, password) => {
-  // TODO: encrypt
-  const exportKey = await crypto.subtle.exportKey("spki", key);
-
-  const payload = {
-    bytes: arrayBufferToBase64String(exportKey),
-  };
-
-  return payload;
-};
-
 const serializeEncryptionKey = async (key, password) => {
   const keyMaterial = await getKeyMaterial(password);
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -83,9 +128,12 @@ const serializeEncryptionKey = async (key, password) => {
     'AES-KW',
   );
 
+  console.log(salt);
+  console.log(wrapped)
+
   return {
-    salt: uintBufferToBase64String(salt),
-    bytes: arrayBufferToBase64String(wrapped),
+    salt: arrayBufferToString(salt.buffer),
+    bytes: arrayBufferToString(wrapped),
   };
 };
 
@@ -97,12 +145,6 @@ const serialize = async (context, password) => {
     copy.keys.signing.privateKey = await serializePrivateKey(context.keys.signing.privateKey, password);
   } catch (error) {
     console.log('Could not serialize private key.', error);
-  }
-
-  try {
-    copy.keys.signing.publicKey = await serializePublicKey(context.keys.signing.publicKey, password);
-  } catch (error) {
-    console.log('Could not serialize public key.', error);
   }
 
   try {
@@ -126,6 +168,12 @@ const deserialize = async (data, password) => {
     context.keys.signing.privateKey = await deserializePrivateKey(privateKey, password);
   } catch (error) {
     console.error(`Could not create private key: ${error}.`);
+  }
+
+  try {
+    context.keys.encryption = await deserializeEncryptionKey(encryption, password);
+  } catch (error) {
+    console.log('Could not create encryption key.', error)
   }
 
   return context;

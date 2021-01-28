@@ -5,7 +5,7 @@ import {
   Container,
   Row
 } from 'react-bootstrap';
-import { Component, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createContext, register, createData, serialize, deserialize, updateData, isLoggedIn } from './nk-js';
 import 'codemirror/lib/codemirror.css';
 import '@toast-ui/editor/dist/toastui-editor.css';
@@ -28,10 +28,15 @@ function App() {
   const { keyNames, plaintextValues } = context;
   const note = valueToNote(plaintextValues[activeKey]);
 
-  const onLogin = async password => {
+  const onLogin = async () => {
     const contextData = localStorage.getItem('_context');
-    const newContext = await deserialize(contextData, password);
-    setContext(newContext);
+    if (contextData) {
+      const newContext = await deserialize(contextData, '111111');
+      setContext(newContext);
+
+      // todo update keys asynchronously
+
+    }
   };
 
   const onLogout = () => {
@@ -70,6 +75,9 @@ function App() {
 
     return { name: k, isEncrypted: true };
   });
+
+  // run on first render
+  useEffect(onLogin, []);
 
   return (
     <Container className={'h-100 mh-100'}>
