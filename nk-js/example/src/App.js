@@ -6,7 +6,17 @@ import {
   Row
 } from 'react-bootstrap';
 import { useEffect, useState } from 'react';
-import { createContext, register, createData, serialize, deserialize, updateData, isLoggedIn, getKeys } from './nk-js';
+import {
+  createContext,
+  register,
+  createData,
+  serialize,
+  deserialize,
+  updateData,
+  isLoggedIn,
+  getKeys,
+  getData
+} from './nk-js';
 import 'codemirror/lib/codemirror.css';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
@@ -17,9 +27,18 @@ import { newNote, noteToValue, valueToNote } from './notes';
 
 // taken from https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
 const newKey = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-  const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+  const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
   return v.toString(16);
 });
+
+const getUnloadedKey = context => {
+  const { keyNames, plaintextValues } = context;
+  for (const key of keyNames) {
+    if (!plaintextValues[key]) {
+      return key;
+    }
+  }
+};
 
 function App() {
   const [context, setContext] = useState(createContext());
@@ -33,8 +52,14 @@ function App() {
     if (contextData) {
       let newContext = await deserialize(contextData, '111111');
       newContext = await getKeys(newContext);
-
       setContext(newContext);
+      /*
+      let unloadedKey = getUnloadedKey(newContext);
+      while (unloadedKey) {
+        newContext = await getData(newContext, unloadedKey);
+        unloadedKey = getUnloadedKey(newContext);
+      }
+      */
     }
   };
 
@@ -66,6 +91,14 @@ function App() {
     setContext(newContext);
   };
 
+  const onSelectNote = async key => {
+    const { plaintextValues } = context;
+    if (!plaintextValues[key]) {
+      const newContext = await getData(context, key);
+      setContext(newContext);
+    }
+  };
+
   const files = keyNames.map(k => {
     if (plaintextValues[k]) {
       const { title } = valueToNote(plaintextValues[k]);
@@ -76,7 +109,7 @@ function App() {
   });
 
   // run on first render
-  useEffect(onLogin, []);
+  useEffect(() => onLogin(), []);
 
   return (
     <Container className={'h-100 mh-100'}>
@@ -95,7 +128,7 @@ function App() {
                 files={files}
                 activeNote={activeKey}
                 onCreateNote={onCreateNote}
-                onNoteSelected={setActiveKey}
+                onNoteSelected={onSelectNote}
               />
             </Col>
 

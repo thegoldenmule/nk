@@ -159,7 +159,7 @@ const serialize = async (context, password) => {
 const deserialize = async (data, password) => {
   const context = JSON.parse(data);
 
-  const { signing: { privateKey, publicKey }, encryption } = context.keys;
+  const { signing: { privateKey }, encryption } = context.keys;
   context.keys = {
     signing: {},
   };
@@ -310,7 +310,7 @@ const decrypt = async (context, value) => {
     plaintext = await crypto.subtle.decrypt(
       aesParameters(),
       context.keys.encryption,
-      base64StringToUintBuffer(value),
+      base64StringToUintBuffer(value).buffer,
     );
   } catch (error) {
     throw new Error(`Could not decrypt value: ${error}.`);
@@ -516,4 +516,4 @@ const updateData = async (context, keyName, value) => {
   return contextWithValue(context, keyName, value);
 };
 
-export { createContext, contextWithConfig, isLoggedIn, register, createData, updateData, getKeys, serialize, deserialize };
+export { createContext, contextWithConfig, isLoggedIn, register, createData, updateData, getData, getKeys, serialize, deserialize };

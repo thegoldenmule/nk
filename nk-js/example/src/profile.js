@@ -9,6 +9,7 @@ const ProfileView = ({ context, onCreateUser, onLogin, onLogout }) => {
     <Navbar bg={'light'} expand={'lg'}>
       <Navbar.Brand>
         <img
+          alt={'Logo'}
           width={'44'}
           style={{ marginRight: '20px '}}
           src={'/logo.png'}

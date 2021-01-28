@@ -1,6 +1,6 @@
 import { Button, FormControl, InputGroup, ListGroup, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faLock, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { useState } from 'react';
 
 const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, }) => {
@@ -42,7 +42,11 @@ const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, })
         active={activeNote === name}
         onClick={() => onNoteSelected(name)}
       >
-        {name}
+        {
+          isEncrypted
+            ? <FontAwesomeIcon icon={faLock} />
+            : <span>{name}</span>
+        }
       </ListGroup.Item>
     );
   }
