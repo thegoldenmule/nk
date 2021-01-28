@@ -28,8 +28,8 @@ function App() {
   const [context, setContext] = useState(loadContext());
   const [activeKey, setActiveKey] = useState('');
 
-  const { keyNames, values } = context;
-  const note = valueToNote(values[activeKey]);
+  const { keyNames, plaintextValues } = context;
+  const note = valueToNote(plaintextValues[activeKey]);
 
   const onLogin = async password => {
     const contextData = localStorage.getItem('_context');
@@ -77,7 +77,7 @@ function App() {
           <Row className={'p-2 h-100'}>
             <Col className={'p-2'} xs={4}>
               <FileBrowser
-                notes={values}
+                notes={plaintextValues}
                 activeNote={activeKey}
                 onCreateNote={onCreateNote}
                 onNoteSelected={setActiveKey}

@@ -183,7 +183,7 @@ const createContext = () => ({
     encryption: undefined,
   },
   keyNames: [],
-  values: {}
+  plaintextValues: {},
 });
 
 const contextWithConfig = (context, { url }) => ({
@@ -211,8 +211,8 @@ const contextWithUserId = (context, userId) => ({
 
 const contextWithValue = (context, keyName, value) => contextWithKeyNames({
   ...context,
-  values: {
-    ...context.values,
+  plaintextValues: {
+    ...context.plaintextValues,
     [keyName]: value
   }
 }, [...context.keyNames, keyName]);
