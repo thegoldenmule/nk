@@ -1,11 +1,12 @@
 import './App.css';
 import {
+  Alert,
   Col,
   Container,
   Row
 } from 'react-bootstrap';
 import { Component, useState } from 'react';
-import { createContext, register, createData, serialize, deserialize, updateData } from './nk-js';
+import { createContext, register, createData, serialize, deserialize, updateData, isLoggedIn } from './nk-js';
 import 'codemirror/lib/codemirror.css';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
@@ -71,24 +72,39 @@ function App() {
         onCreateUser={onCreateUser}
       />
 
-      <Row className={'p-2 h-100'}>
-        <Col className={'p-2'} xs={4}>
-          <FileBrowser
-            notes={values}
-            activeNote={activeKey}
-            onCreateNote={onCreateNote}
-            onNoteSelected={setActiveKey}
-          />
-        </Col>
+      {
+        isLoggedIn(context) && (
+          <Row className={'p-2 h-100'}>
+            <Col className={'p-2'} xs={4}>
+              <FileBrowser
+                notes={values}
+                activeNote={activeKey}
+                onCreateNote={onCreateNote}
+                onNoteSelected={setActiveKey}
+              />
+            </Col>
 
-        <Col className={'p-2 h-100'}>
-          <NoteEditor
-            activeNote={activeKey}
-            note={note}
-            onSave={onSave}
-          />
-        </Col>
-      </Row>
+            <Col className={'p-2 h-100'}>
+              <NoteEditor
+                activeNote={activeKey}
+                note={note}
+                onSave={onSave}
+              />
+            </Col>
+          </Row>
+        )
+      }
+
+      {
+        !isLoggedIn(context) && (
+          <Row className={'pt-5'}>
+            <Col>
+              <Alert variant={'dark'}>Register or login to continue.</Alert>
+            </Col>
+          </Row>
+        )
+      }
+
     </Container>
   );
 }
