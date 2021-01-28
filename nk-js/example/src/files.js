@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch } from '@fortawesome/free-solid-svg-icons';
 import { useState } from 'react';
 
-const FileBrowser = ({ notes = {}, activeNote, onCreateNote, onNoteSelected, }) => {
+const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, }) => {
   // state
   const [isCreating, setIsCreating] = useState(false);
 
@@ -33,15 +33,18 @@ const FileBrowser = ({ notes = {}, activeNote, onCreateNote, onNoteSelected, }) 
     </ListGroup.Item>
   )];
 
-  for (const [k, v] of Object.entries(notes)) {
+  for (let i = 0, len = files.length; i < len; i++) {
+    const { name, isEncrypted } = files[i];
+
     listItems.push(
       <ListGroup.Item
-        key={k}
-        active={activeNote === k}
-        onClick={() => onNoteSelected(k)}
+        key={i}
+        active={activeNote === name}
+        onClick={() => onNoteSelected(name)}
       >
-        {k}
-      </ListGroup.Item>);
+        {name}
+      </ListGroup.Item>
+    );
   }
 
   return (

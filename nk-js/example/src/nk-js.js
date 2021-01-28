@@ -219,6 +219,58 @@ const contextWithValue = (context, keyName, value) => contextWithKeyNames({
 
 const isLoggedIn = context => context.userId !== undefined;
 
+const encrypt = async (context, value) => {
+  // create Uint8Array from value
+  const enc = new TextEncoder();
+  const encodedValue = enc.encode(value);
+
+  // encrypt with hard symmetric encryption
+  let cipher;
+  try {
+    cipher = await crypto.subtle.encrypt(
+      aesParameters(),
+      context.keys.encryption,
+      encodedValue
+    );
+  } catch (error) {
+    throw new Error(`Could not encrypt value: ${error}.`);
+  }
+
+  // sign ciphertext with signing key
+  let signature;
+  try {
+    signature = await window.crypto.subtle.sign(
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+      },
+      context.keys.signing.privateKey,
+      new Uint8Array(cipher),
+    );
+  } catch (error) {
+    throw new Error(`Could not sign value: ${error}.`);
+  }
+
+  return {
+    value: arrayBufferToBase64String(cipher),
+    signature: arrayBufferToBase64String(signature),
+  }
+};
+
+const decrypt = async (context, value) => {
+  let plaintext;
+  try {
+    plaintext = await crypto.subtle.decrypt(
+      aesParameters(),
+      context.keys.encryption,
+      base64StringToUintBuffer(value),
+    );
+  } catch (error) {
+    throw new Error(`Could not decrypt value: ${error}.`);
+  }
+
+  return plaintext;
+};
+
 const register = async (context) => {
   // generate signing pair
   let signingKeys;
@@ -330,43 +382,6 @@ const getKeys = async (context) => {
   return contextWithKeyNames(context, keys);
 };
 
-const encrypt = async (context, value) => {
-  // create Uint8Array from value
-  const enc = new TextEncoder();
-  const encodedValue = enc.encode(value);
-
-  // encrypt with hard symmetric encryption
-  let cipher;
-  try {
-    cipher = await crypto.subtle.encrypt(
-      aesParameters(),
-      context.keys.encryption,
-      encodedValue
-    );
-  } catch (error) {
-    throw new Error(`Could not encrypt value: ${error}.`);
-  }
-
-  // sign ciphertext with signing key
-  let signature;
-  try {
-    signature = await window.crypto.subtle.sign(
-      {
-        name: 'RSASSA-PKCS1-v1_5',
-      },
-      context.keys.signing.privateKey,
-      new Uint8Array(cipher),
-    );
-  } catch (error) {
-    throw new Error(`Could not sign value: ${error}.`);
-  }
-
-  return {
-    value: arrayBufferToBase64String(cipher),
-    signature: arrayBufferToBase64String(signature),
-  }
-}
-
 const createData = async (context, keyName, value) => {
   const { value: cipherValue, signature } = await encrypt(context, value);
 
@@ -397,6 +412,28 @@ const createData = async (context, keyName, value) => {
   }
 
   return contextWithValue(context, keyName, value);
+};
+
+const getData = async (context, keyName) => {
+  let json;
+  try {
+    const res = await proveFetch(
+      context,
+      `${context.url}/data/${context.userId}/${keyName}`
+    );
+
+    json = await res.json();
+  } catch (error) {
+    throw new Error(`Could not get data: ${error}.`);
+  }
+
+  const { success, value: cipherValue } = json;
+  if (!success) {
+    throw new Error(`Could not get data.`);
+  }
+
+  const plaintext = await decrypt(context, cipherValue);
+  return contextWithValue(context, keyName, plaintext);
 };
 
 const updateData = async (context, keyName, value) => {

@@ -12,7 +12,6 @@ import '@toast-ui/editor/dist/toastui-editor.css';
 
 import ProfileView from './profile';
 import FileBrowser from './files';
-import * as PropTypes from 'prop-types';
 import NoteEditor from './editor';
 import { newNote, noteToValue, valueToNote } from './notes';
 
@@ -61,6 +60,15 @@ function App() {
     setContext(newContext);
   };
 
+  const files = keyNames.map(k => {
+    if (plaintextValues[k]) {
+      const { title } = valueToNote(plaintextValues[k]);
+      return { name: title, isEncrypted: false };
+    }
+
+    return { name: k, isEncrypted: true };
+  });
+
   return (
     <Container className={'h-100 mh-100'}>
       <ProfileView
@@ -77,7 +85,7 @@ function App() {
           <Row className={'p-2 h-100'}>
             <Col className={'p-2'} xs={4}>
               <FileBrowser
-                notes={plaintextValues}
+                files={files}
                 activeNote={activeKey}
                 onCreateNote={onCreateNote}
                 onNoteSelected={setActiveKey}

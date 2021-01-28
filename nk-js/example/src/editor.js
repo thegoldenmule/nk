@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Button, ButtonGroup, ButtonToolbar, Form, OverlayTrigger, Spinner, Tooltip } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCopy, faSave, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faCopy, faHistory, faSave, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { Editor } from '@toast-ui/react-editor';
 import * as PropTypes from 'prop-types';
 import { noteFromParameters } from './notes';
@@ -62,6 +62,11 @@ const NoteEditor = ({ activeNote, note = {}, onSave }) => {
             </OverlayTrigger>
           </ButtonGroup>
           <ButtonGroup>
+            <OverlayTrigger overlay={(
+              <Tooltip id={'tt-revert'}>Revert</Tooltip>
+            )}>
+              <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faHistory} /></Button>
+            </OverlayTrigger>
             <OverlayTrigger overlay={(
               <Tooltip id={'tt-delete'}>Delete</Tooltip>
             )}>

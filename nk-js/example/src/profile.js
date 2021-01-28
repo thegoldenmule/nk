@@ -15,7 +15,7 @@ const ProfileView = ({ context, onCreateUser, onLogin, onLogout }) => {
         />
         Nk Notes
       </Navbar.Brand>
-      <Navbar.Toggle aria-controle={'basic-navbar-nav'} />
+      <Navbar.Toggle aria-controls={'basic-navbar-nav'} />
       <Navbar.Collapse id={'basic-navbar-nav'} className={'justify-content-end'}>
         {
           isLoggedIn(context)
