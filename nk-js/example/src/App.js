@@ -21,10 +21,8 @@ const newKey = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c =
   return v.toString(16);
 });
 
-const loadContext = () => createContext();
-
 function App() {
-  const [context, setContext] = useState(loadContext());
+  const [context, setContext] = useState(createContext());
   const [activeKey, setActiveKey] = useState('');
 
   const { keyNames, plaintextValues } = context;
@@ -32,8 +30,12 @@ function App() {
 
   const onLogin = async password => {
     const contextData = localStorage.getItem('_context');
-    const newContext = deserialize(contextData, password);
+    const newContext = await deserialize(contextData, password);
     setContext(newContext);
+  };
+
+  const onLogout = () => {
+    setContext(createContext())
   };
 
   const onCreateUser = async () => {
@@ -74,9 +76,7 @@ function App() {
       <ProfileView
         context={context}
         onLogin={onLogin}
-        onLogout={() => {
-          // TODO
-        }}
+        onLogout={onLogout}
         onCreateUser={onCreateUser}
       />
 
