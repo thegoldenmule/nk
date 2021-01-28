@@ -23,13 +23,14 @@ namespace TheGoldenMule.Nk.Models.Db
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseNpgsql("Server=db;Database=nk;Username=postgres;Password=example");
+                //optionsBuilder.UseNpgsql("Server=db;Database=nk;Username=postgres;Password=example");
+                optionsBuilder.UseNpgsql("Server=ec2-3-128-33-82.us-east-2.compute.amazonaws.com;Database=nk;Username=postgres;Password=example");
             }
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.HasAnnotation("Relational:Collation", "en_US.utf8");
+            modelBuilder.HasAnnotation("Relational:Collation", "en_US.utf16");
 
             modelBuilder.Entity<Datum>(entity =>
             {

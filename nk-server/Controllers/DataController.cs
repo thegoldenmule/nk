@@ -1,6 +1,9 @@
 using System;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -68,9 +71,14 @@ namespace TheGoldenMule.Nk.Controllers
 
         [HttpPost]
         [Route("{userId}")]
-        public async Task<CreateDataResponse> Create(string userId, CreateDataRequest req)
+        public async Task<CreateDataResponse> Create(string userId)
         {
             _logger.LogInformation("Received request to create data.", new { userId });
+            
+            // read request
+            var key = Request.Form["Key"];
+            var sig = Request.Form.Files["Sig"];
+            var payload = Request.Form.Files["Payload"];
             
             User user;
             try
@@ -87,8 +95,13 @@ namespace TheGoldenMule.Nk.Controllers
                 };
             }
 
-            var payloadBytes = Convert.FromBase64String(req.Payload);
-            var sigBytes = Convert.FromBase64String(req.Sig);
+            var payloadStream = new MemoryStream((int) payload.Length);
+            await payload.CopyToAsync(payloadStream);
+            var payloadBytes = payloadStream.ToArray();
+            
+            var sigStream = new MemoryStream((int) sig.Length);
+            await sig.CopyToAsync(sigStream);
+            var sigBytes = sigStream.ToArray();
 
             if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyChars))
             {
@@ -104,14 +117,16 @@ namespace TheGoldenMule.Nk.Controllers
             // the private key
             
             // store payload
+            var datum = new Datum
+            {
+                UserId = userId,
+                Key = key,
+                Data = Encoding.Unicode.GetString(payloadBytes)
+            };
+            
             try
             {
-                await _db.Data.AddAsync(new Datum
-                {
-                    UserId = userId,
-                    Key = req.Key,
-                    Data = req.Payload
-                });
+                await _db.Data.AddAsync(datum);
             }
             catch (Exception exception)
             {
@@ -221,18 +236,14 @@ namespace TheGoldenMule.Nk.Controllers
 
         [HttpGet]
         [Route("{userId}/{key}")]
-        public async Task<GetDataResponse> Get(string userId, string key)
+        public async Task Get(string userId, string key)
         {
             // TODO: verify proof
 
             // now look up the data
             var data = await _db.Data.SingleAsync(d => d.UserId == userId && d.Key == key);
 
-            return new GetDataResponse
-            {
-                Success = true,
-                Value = data.Data
-            };
+            await Response.Body.WriteAsync(Encoding.Unicode.GetBytes(data.Data));
         }
     }
 }

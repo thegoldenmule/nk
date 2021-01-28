@@ -92,7 +92,7 @@ const NoteEditor = ({ activeNote, note = {}, onSave }) => {
 
 NoteEditor.propTypes = {
   onSave: PropTypes.func.isRequired,
-  note: PropTypes.string,
+  note: PropTypes.object,
   activeNote: PropTypes.string
 };
 

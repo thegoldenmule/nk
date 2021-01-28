@@ -217,14 +217,15 @@ const exportPublicPEM = async (publicKey) => {
   return `-----BEGIN PUBLIC KEY-----\n${key}\n-----END PUBLIC KEY-----`;
 };
 
-const aesParameters = () => ({
+const aesParameters = iv => ({
   name: 'AES-GCM',
-  iv: window.crypto.getRandomValues(new Uint8Array(12)),
   tagLength: 128,
+  iv,
 });
 
 const createContext = () => ({
-  url: 'https://nk-server.thegoldenmule.com',
+  //url: 'https://nk-server.thegoldenmule.com',
+  url: 'http://localhost',
   userId: undefined,
   keys: {
     signing: undefined,
@@ -267,6 +268,9 @@ const contextWithValue = (context, keyName, value) => contextWithKeyNames({
 
 const isLoggedIn = context => context.userId !== undefined;
 
+//window.crypto.getRandomValues(new Uint8Array(12))
+const constantIv = new Uint8Array(12);
+
 const encrypt = async (context, value) => {
   // create Uint8Array from value
   const enc = new TextEncoder();
@@ -276,7 +280,7 @@ const encrypt = async (context, value) => {
   let cipher;
   try {
     cipher = await crypto.subtle.encrypt(
-      aesParameters(),
+      aesParameters(constantIv),
       context.keys.encryption,
       encodedValue
     );
@@ -299,8 +303,8 @@ const encrypt = async (context, value) => {
   }
 
   return {
-    value: arrayBufferToBase64String(cipher),
-    signature: arrayBufferToBase64String(signature),
+    value: cipher,
+    signature: signature,
   }
 };
 
@@ -308,15 +312,15 @@ const decrypt = async (context, value) => {
   let plaintext;
   try {
     plaintext = await crypto.subtle.decrypt(
-      aesParameters(),
+      aesParameters(constantIv),
       context.keys.encryption,
-      base64StringToUintBuffer(value).buffer,
+      value,
     );
   } catch (error) {
     throw new Error(`Could not decrypt value: ${error}.`);
   }
 
-  return plaintext;
+  return new TextDecoder().decode(plaintext);
 };
 
 const register = async (context) => {
@@ -433,21 +437,21 @@ const getKeys = async (context) => {
 const createData = async (context, keyName, value) => {
   const { value: cipherValue, signature } = await encrypt(context, value);
 
-  // send
+  console.log('POST', cipherValue);
+
+  // prepare binary data
+  const form = new FormData();
+  form.append('Key', keyName);
+  form.append('Sig', new Blob([signature]));
+  form.append('Payload', new Blob([cipherValue]));
+
+  // send binary data
   let json;
   try {
     const res = await fetch(`${context.url}/data/${context.userId}`,
       {
         method: 'post',
-        body: JSON.stringify({
-          Key: keyName,
-          Payload: cipherValue,
-          Sig: signature,
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        body: form,
       });
 
     json = await res.json();
@@ -463,24 +467,29 @@ const createData = async (context, keyName, value) => {
 };
 
 const getData = async (context, keyName) => {
-  let json;
+  let buffer;
   try {
     const res = await proveFetch(
       context,
       `${context.url}/data/${context.userId}/${keyName}`
     );
 
-    json = await res.json();
+    buffer = await res.arrayBuffer();
   } catch (error) {
     throw new Error(`Could not get data: ${error}.`);
   }
 
-  const { success, value: cipherValue } = json;
-  if (!success) {
-    throw new Error(`Could not get data.`);
+  console.log('GET', buffer);
+
+  let plaintext;
+  try {
+    plaintext = await decrypt(context, buffer);
+  } catch (error) {
+    console.log(error);
+
+    throw new Error(`Could not decrypt data: ${error}.`);
   }
 
-  const plaintext = await decrypt(context, cipherValue);
   return contextWithValue(context, keyName, plaintext);
 };
 

@@ -4,7 +4,7 @@ version: '3.1'
 services:
 
   nk:
-    image: thegoldenmule/nk-server
+    image: nk-server
     restart: always
     ports:
       - 80:80
