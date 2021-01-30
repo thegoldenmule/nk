@@ -3,18 +3,23 @@ import { Button, ButtonGroup, ButtonToolbar, Form, OverlayTrigger, Spinner, Tool
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faHistory, faSave, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { Editor } from '@toast-ui/react-editor';
-import * as PropTypes from 'prop-types';
 import { noteFromParametersFactory } from './notes';
+import { connect } from 'react-redux';
+import {
+  getDraft,
+  getDraftBody,
+  getDraftKey,
+  getDraftTitle,
+  updateBody,
+  updateTitle
+} from './slices/draftSlice';
+import { getNoteStatuses, noteStatus } from './slices/nkSlice';
+import { getActiveKey } from './slices/workspaceSlice';
 
-const NoteEditor = ({ activeNote, note = {}, onSave }) => {
-  const { title, body } = note;
-
+const NoteEditor = ({ onSave, isSaving, activeKey: key, title, body, dispatchUpdateTitle, dispatchUpdateBody }) => {
   const ref = useRef(null);
-  const [draftTitle, setDraftTitle] = useState(title);
-  const [draftBody, setDraftBody] = useState(body);
-  const [isSaving, setIsSaving] = useState(false);
 
-  if (!activeNote) {
+  if (!key) {
     return null;
   }
 
@@ -25,8 +30,8 @@ const NoteEditor = ({ activeNote, note = {}, onSave }) => {
           size={'lg'}
           type={'text'}
           placeholder={'Title'}
-          value={draftTitle}
-          onChange={evt => setDraftTitle(evt.target.value)}
+          value={title}
+          onChange={evt => dispatchUpdateTitle(evt.target.value)}
         />
       </div>
 
@@ -35,12 +40,9 @@ const NoteEditor = ({ activeNote, note = {}, onSave }) => {
           <ButtonGroup>
             <Button
               onClick={async () => {
-                setIsSaving(true);
-                await onSave({
-                  key: activeNote,
-                  note: noteFromParametersFactory({title: draftTitle, body: draftBody}),
-                });
-                setIsSaving(false);
+                //setIsSaving(true);
+                await onSave({ key, title, body });
+                //setIsSaving(false);
               }}
             >
               {
@@ -66,22 +68,27 @@ const NoteEditor = ({ activeNote, note = {}, onSave }) => {
 
       <Editor
         ref={ref}
-        initialValue={draftBody}
+        initialValue={body}
         placeholder='Start writing'
         previewStyle='vertical'
         height='600px'
         initialEditType='wysiwyg'
         useCommandShortcut={true}
-        onChange={() => setDraftBody(ref.current.getInstance().getMarkdown())}
+        onChange={() => dispatchUpdateBody(ref.current.getInstance().getMarkdown())}
       />
     </div>
-  )
+  );
 };
 
-NoteEditor.propTypes = {
-  onSave: PropTypes.func.isRequired,
-  note: PropTypes.object,
-  activeNote: PropTypes.string
-};
-
-export default NoteEditor;
+export default connect(
+  state => ({
+    activeKey: getDraftKey(state),
+    title: getDraftTitle(state),
+    body: getDraftBody(state),
+    isSaving: getNoteStatuses(state)[getDraftKey(state)] === noteStatus.loading,
+  }),
+  dispatch => ({
+    dispatchUpdateTitle: title => dispatch(updateTitle(title)),
+    dispatchUpdateBody: body => dispatch(updateBody(body)),
+  }),
+)(NoteEditor);

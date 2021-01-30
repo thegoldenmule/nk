@@ -26,6 +26,8 @@ import {
 import { connect } from 'react-redux';
 import { getActiveKey, updateActiveKey } from './slices/workspaceSlice';
 import { unwrapResult } from '@reduxjs/toolkit';
+import { getDraft, newDraft } from './slices/draftSlice';
+import { noteFromParametersFactory } from './notes';
 
 const getUnloadedKey = (noteStatuses) => {
   for (const [k, status] of Object.entries(noteStatuses)) {
@@ -39,6 +41,7 @@ function App({
   context, isLoggedIn,
   activeKey, dispatchUpdateActiveKey,
   noteKeys, noteValues, noteStatuses,
+  draft,
   dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote, dispatchUpdateNote,
 }) {
   const note = noteValues[activeKey];
@@ -65,27 +68,35 @@ function App({
       return;
     }
 
-    const { key } = payload;
-    await dispatchUpdateActiveKey(key);
+    const { key, note } = payload;
+    dispatchUpdateActiveKey({ key, note });
   };
 
-  const onSave = async ({ key, note }) => {
-    await dispatchUpdateNote({ key, note });
+  const onSave = async () => {
+    await dispatchUpdateNote({
+      key: activeKey,
+      note: noteFromParametersFactory({
+        title: draft.title,
+        body: draft.body,
+      }),
+    });
   };
 
   const onSelectNote = async key => {
-    if (!noteValues[key]) {
-      const res = await dispatchLoadNote(key)
+    let note = noteValues[key];
+    if (!note) {
+      let res = await dispatchLoadNote(key)
 
       try {
-        await unwrapResult(res);
+        res = unwrapResult(res);
+        note = res.note;
       } catch (error) {
         // if load note doesn't work, do not update active key
         return;
       }
     }
 
-    dispatchUpdateActiveKey(key);
+    dispatchUpdateActiveKey({ key, note });
   };
 
   const files = noteKeys.map(k => {
@@ -130,11 +141,7 @@ function App({
             </Col>
 
             <Col className={'p-2 h-100'}>
-              <NoteEditor
-                activeNote={activeKey}
-                note={note}
-                onSave={onSave}
-              />
+              <NoteEditor onSave={onSave} />
             </Col>
           </Row>
         )
@@ -162,6 +169,7 @@ export default connect(
     noteKeys: getNoteKeys(state),
     noteValues: getNoteValues(state),
     noteStatuses: getNoteStatuses(state),
+    draft: getDraft(state),
   }),
   dispatch => ({
     dispatchLogin: () => dispatch(login()),
@@ -170,6 +178,10 @@ export default connect(
     dispatchNewNote: () => dispatch(newNote()),
     dispatchLoadNote: key => dispatch(loadNote(key)),
     dispatchUpdateNote: ({ key, note }) => dispatch(updateNote({ key, note })),
-    dispatchUpdateActiveKey: key => dispatch(updateActiveKey(key)),
+    dispatchUpdateActiveKey: ({ key, note }) => {
+      const { title, body } = note;
+      dispatch(updateActiveKey(key));
+      dispatch(newDraft({ key, title, body }));
+    },
   }),
 )(App);

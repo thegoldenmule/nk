@@ -16,6 +16,7 @@ export const noteStatus = {
   unloaded: 'unloaded',
   loading: 'loading',
   loaded: 'loaded',
+  saving: 'saving',
   error: 'error',
 };
 
@@ -93,7 +94,9 @@ export const loadNote = createAsyncThunk(
       return rejectWithValue({ key, error });
     }
 
-    return { key, context: newContext };
+    const note = valueToNote(newContext.plaintextValues[key])
+
+    return { key, note, context: newContext };
   }
 );
 
@@ -164,17 +167,6 @@ const nkSlice = createSlice({
         context: createContext(),
       };
     },
-
-    saveNote(state, action) {
-      return state;
-    },
-
-    updateContext(state, action) {
-      return {
-        ...state,
-        context: action.payload
-      };
-    },
   },
   extraReducers: {
     [login.fulfilled]: (state, action) => ({
@@ -236,11 +228,12 @@ const nkSlice = createSlice({
         },
       };
     },
-    [loadNote.fulfilled]: (state, { payload: { key, context } }) => ({
+    [loadNote.fulfilled]: (state, { payload: { key, context, note } }) => ({
       ...state,
+      context,
       noteValues: {
         ...state.noteValues,
-        [key]: valueToNote(context.plaintextValues[key]),
+        [key]: note,
       },
       noteStatuses: {
         ...state.noteStatuses,
@@ -254,16 +247,32 @@ const nkSlice = createSlice({
         [key]: noteStatus.error
       },
     }),
+    [updateNote.pending]: (state, { meta: { arg: { key } } }) => {
+      return {
+        ...state,
+        noteStatuses: {
+          ...state.noteStatuses,
+          [key]: noteStatus.saving,
+        },
+      };
+    },
     [updateNote.fulfilled]: (state, { payload: { key, context } }) => {
       return {
         ...state,
         context,
+        noteStatuses: {
+          ...state.noteStatuses,
+          [key]: noteStatus.loaded,
+        },
       };
     },
     [updateNote.rejected]: (state, { key, error }) => {
       return {
         ...state,
-        // TODO: add error
+        noteStatuses: {
+          ...state.noteStatuses,
+          [key]: noteStatus.error,
+        },
       };
     }
   },
@@ -276,5 +285,5 @@ export const getNoteKeys = createSelector(getNk, ({ noteKeys }) => noteKeys);
 export const getNoteValues = createSelector(getNk, ({ noteValues }) => noteValues);
 export const getNoteStatuses = createSelector(getNk, ({ noteStatuses }) => noteStatuses);
 
-export const { logout, saveNote } = nkSlice.actions;
+export const { logout } = nkSlice.actions;
 export default nkSlice.reducer;

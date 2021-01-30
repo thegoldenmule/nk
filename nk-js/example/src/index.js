@@ -8,6 +8,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import nkReducer from './slices/nkSlice';
 import workspaceReducer from './slices/workspaceSlice';
+import draftReducer from './slices/draftSlice';
 
 import { Provider } from 'react-redux';
 import thunk from 'redux-thunk';
@@ -17,6 +18,7 @@ const store = configureStore({
   reducer: {
     nk: nkReducer,
     workspace: workspaceReducer,
+    draft: draftReducer,
   },
   middleware: [thunk, logger],
 });
