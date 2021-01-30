@@ -202,6 +202,8 @@ const generateSymmetricKey = async () => await crypto.subtle.generateKey(
   true,
   ['encrypt', 'decrypt']);
 
+const generateIv = () => window.crypto.getRandomValues(new Uint8Array(12));
+
 const exportPublicPEM = async (publicKey) => {
   let exportedPublic;
   try {
@@ -268,10 +270,7 @@ const contextWithValue = (context, keyName, value) => contextWithKeyNames({
 
 const isLoggedIn = context => context.userId !== undefined;
 
-//window.crypto.getRandomValues(new Uint8Array(12))
-const constantIv = new Uint8Array(12);
-
-const encrypt = async (context, value) => {
+const encrypt = async (context, iv, value) => {
   // create Uint8Array from value
   const enc = new TextEncoder();
   const encodedValue = enc.encode(value);
@@ -280,7 +279,7 @@ const encrypt = async (context, value) => {
   let cipher;
   try {
     cipher = await crypto.subtle.encrypt(
-      aesParameters(constantIv),
+      aesParameters(iv),
       context.keys.encryption,
       encodedValue
     );
@@ -308,11 +307,11 @@ const encrypt = async (context, value) => {
   }
 };
 
-const decrypt = async (context, value) => {
+const decrypt = async (context, iv, value) => {
   let plaintext;
   try {
     plaintext = await crypto.subtle.decrypt(
-      aesParameters(constantIv),
+      aesParameters(iv),
       context.keys.encryption,
       value,
     );
@@ -435,13 +434,13 @@ const getKeys = async (context) => {
 };
 
 const createData = async (context, keyName, value) => {
-  const { value: cipherValue, signature } = await encrypt(context, value);
-
-  console.log('POST', cipherValue);
+  const iv = generateIv();
+  const { value: cipherValue, signature } = await encrypt(context, iv, value);
 
   // prepare binary data
   const form = new FormData();
   form.append('Key', keyName);
+  form.append('Iv', new Blob([iv]));
   form.append('Sig', new Blob([signature]));
   form.append('Payload', new Blob([cipherValue]));
 
@@ -466,27 +465,40 @@ const createData = async (context, keyName, value) => {
   return contextWithValue(context, keyName, value);
 };
 
+const splitBuffer = buffer => {
+  const view8 = new Uint8Array(buffer);
+  const view16 = new Uint16Array(buffer);
+  return [view8.subarray(0, 12), view16.subarray(6)];
+};
+
 const getData = async (context, keyName) => {
-  let buffer;
+  // fetch
+  let res;
   try {
-    const res = await proveFetch(
+    res = await proveFetch(
       context,
       `${context.url}/data/${context.userId}/${keyName}`
     );
-
-    buffer = await res.arrayBuffer();
   } catch (error) {
-    throw new Error(`Could not get data: ${error}.`);
+    throw new Error(`Could not prove fetch: ${error}.`);
   }
 
-  console.log('GET', buffer);
+  // read response
+  let buffer;
+  try {
+    buffer = await res.arrayBuffer();
+  } catch (error) {
+    throw new Error(`Could not read response: ${error}.`);
+  }
 
+  // split off iv
+  const [iv, cipherBytes] = splitBuffer(buffer);
+
+  // decrypt response
   let plaintext;
   try {
-    plaintext = await decrypt(context, buffer);
+    plaintext = await decrypt(context, iv, cipherBytes);
   } catch (error) {
-    console.log(error);
-
     throw new Error(`Could not decrypt data: ${error}.`);
   }
 

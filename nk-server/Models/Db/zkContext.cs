@@ -49,6 +49,10 @@ namespace TheGoldenMule.Nk.Models.Db
                 entity.Property(e => e.UserId)
                     .IsRequired()
                     .HasColumnName("userId");
+
+                entity.Property(e => e.Iv)
+                    .IsRequired()
+                    .HasColumnName("iv");
             });
 
             modelBuilder.Entity<Proof>(entity =>

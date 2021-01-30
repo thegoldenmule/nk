@@ -69,6 +69,13 @@ namespace TheGoldenMule.Nk.Controllers
             }
         }
 
+        private static async Task<byte[]> GetBytes(IFormFile file)
+        {
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            return stream.ToArray();
+        }
+        
         [HttpPost]
         [Route("{userId}")]
         public async Task<CreateDataResponse> Create(string userId)
@@ -77,6 +84,7 @@ namespace TheGoldenMule.Nk.Controllers
             
             // read request
             var key = Request.Form["Key"];
+            var iv = Request.Form.Files["iv"];
             var sig = Request.Form.Files["Sig"];
             var payload = Request.Form.Files["Payload"];
             
@@ -95,13 +103,9 @@ namespace TheGoldenMule.Nk.Controllers
                 };
             }
 
-            var payloadStream = new MemoryStream((int) payload.Length);
-            await payload.CopyToAsync(payloadStream);
-            var payloadBytes = payloadStream.ToArray();
-            
-            var sigStream = new MemoryStream((int) sig.Length);
-            await sig.CopyToAsync(sigStream);
-            var sigBytes = sigStream.ToArray();
+            var ivBytes = await GetBytes(iv);
+            var payloadBytes = await GetBytes(payload);
+            var sigBytes = await GetBytes(sig);
 
             if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyChars))
             {
@@ -121,7 +125,8 @@ namespace TheGoldenMule.Nk.Controllers
             {
                 UserId = userId,
                 Key = key,
-                Data = Encoding.Unicode.GetString(payloadBytes)
+                Data = Encoding.Unicode.GetString(payloadBytes),
+                Iv = Encoding.Unicode.GetString(ivBytes),
             };
             
             try
@@ -243,6 +248,7 @@ namespace TheGoldenMule.Nk.Controllers
             // now look up the data
             var data = await _db.Data.SingleAsync(d => d.UserId == userId && d.Key == key);
 
+            await Response.Body.WriteAsync(Encoding.Unicode.GetBytes(data.Iv));
             await Response.Body.WriteAsync(Encoding.Unicode.GetBytes(data.Data));
         }
     }
