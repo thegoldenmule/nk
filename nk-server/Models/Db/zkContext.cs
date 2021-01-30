@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 #nullable disable
 
@@ -24,7 +25,8 @@ namespace TheGoldenMule.Nk.Models.Db
             if (!optionsBuilder.IsConfigured)
             {
                 //optionsBuilder.UseNpgsql("Server=db;Database=nk;Username=postgres;Password=example");
-                optionsBuilder.UseNpgsql("Server=ec2-3-128-33-82.us-east-2.compute.amazonaws.com;Database=nk;Username=postgres;Password=example");
+                //optionsBuilder.UseNpgsql("Server=ec2-3-128-33-82.us-east-2.compute.amazonaws.com;Database=nk;Username=postgres;Password=example");
+                optionsBuilder.UseInMemoryDatabase("nk");
             }
         }
 

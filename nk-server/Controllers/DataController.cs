@@ -24,6 +24,17 @@ namespace TheGoldenMule.Nk.Controllers
         {
             _logger = logger;
         }
+
+        private static string BytesToString(ref byte[] bytes)
+        {
+            return BitConverter.ToString(bytes);
+        }
+
+        private static byte[] StringToBytes(string str)
+        {
+            var spl = str.Split('-');
+            return spl.Select(s => Convert.ToByte(s, 16)).ToArray();
+        }
         
         private async Task CheckSignature(string userId)
         {
@@ -127,8 +138,8 @@ namespace TheGoldenMule.Nk.Controllers
             {
                 UserId = userId,
                 Key = key,
-                Data = Encoding.Unicode.GetString(payloadBytes),
-                Iv = Encoding.Unicode.GetString(ivBytes),
+                Data = BytesToString(ref payloadBytes),
+                Iv = BytesToString(ref ivBytes),
             };
             
             try
@@ -208,8 +219,8 @@ namespace TheGoldenMule.Nk.Controllers
             
             // update
             var data = await _db.Data.SingleAsync(d => d.Key == key);
-            data.Data = Encoding.Unicode.GetString(payloadBytes);
-            data.Iv = Encoding.Unicode.GetString(ivBytes);
+            data.Data = BytesToString(ref payloadBytes);
+            data.Iv = BytesToString(ref ivBytes);
             _db.Update(data);
             
             await _db.SaveChangesAsync();
@@ -267,8 +278,8 @@ namespace TheGoldenMule.Nk.Controllers
             // now look up the data
             var data = await _db.Data.SingleAsync(d => d.UserId == userId && d.Key == key);
 
-            await Response.Body.WriteAsync(Encoding.Unicode.GetBytes(data.Iv));
-            await Response.Body.WriteAsync(Encoding.Unicode.GetBytes(data.Data));
+            await Response.Body.WriteAsync(StringToBytes(data.Iv));
+            await Response.Body.WriteAsync(StringToBytes(data.Data));
         }
     }
 }

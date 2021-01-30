@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +24,23 @@ namespace TheGoldenMule.Nk.Controllers
             _logger = logger;
         }
 
+        [HttpPost]
+        [Route("echo")]
+        public async void Echo()
+        {
+            var payload = Request.Form.Files["Payload"];
+
+            await using var stream = new MemoryStream();
+            await payload.CopyToAsync(stream);
+            var bytes = stream.ToArray();
+
+            var str = BitConverter.ToString(bytes);
+            var spl = str.Split('-');
+            var decoded = spl.Select(s => Convert.ToByte(s, 16)).ToArray();
+            
+            await Response.Body.WriteAsync(decoded);
+        }
+        
         [HttpPost]
         [Route("encrypt")]
         public EncryptPayloadResponse Encrypt(EncryptPayloadRequest req)
