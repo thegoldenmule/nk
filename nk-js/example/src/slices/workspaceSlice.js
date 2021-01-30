@@ -11,7 +11,7 @@ const workspaceSlice = createSlice({
         ...state,
         activeKey: action.payload,
       };
-    }
+    },
   },
 });
 

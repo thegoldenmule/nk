@@ -19,13 +19,13 @@ import {
   login,
   logout,
   signUp,
-  updateContext,
   newNote,
   getNoteKeys,
-  getNoteValues
+  getNoteValues, loadNote, getErrors
 } from './slices/nkSlice';
 import { connect } from 'react-redux';
 import { getActiveKey, updateActiveKey } from './slices/workspaceSlice';
+import { unwrapResult } from '@reduxjs/toolkit';
 
 const getUnloadedKey = context => {
   const { keyNames, plaintextValues } = context;
@@ -37,10 +37,10 @@ const getUnloadedKey = context => {
 };
 
 function App({
-  context, isLoggedIn, dispatchUpdateContext,
-  activeKey, dispatchUpdateActiveKey,
+  context, isLoggedIn,
+  activeKey, errors, dispatchUpdateActiveKey,
   noteValues, noteKeys,
-  dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote,
+  dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote,
 }) {
   const note = noteValues[activeKey];
 
@@ -57,30 +57,51 @@ function App({
   };
 
   const onCreateNote = async () => {
-    await dispatchNewNote();
+    const res = await dispatchNewNote();
+
+    let payload;
+    try {
+      payload = await unwrapResult(res);
+    } catch (error) {
+      return;
+    }
+
+    const { key } = payload;
+    await dispatchUpdateActiveKey(key);
   };
 
   const onSave = async updatedNote => {
-    /*const newContext = await updateData(context, activeKey, noteToValue(updatedNote));
-    setContext(newContext);*/
+    //
   };
 
   const onSelectNote = async key => {
-    /*const { plaintextValues } = context;
-    if (!plaintextValues[key]) {
-      const newContext = await getData(context, key);
-      setContext(newContext);
-    }*/
+    if (!noteValues[key]) {
+      const res = await dispatchLoadNote(key)
+
+      try {
+        await unwrapResult(res);
+      } catch (error) {
+        // if load note doesn't work, do not update active key
+        return;
+      }
+    }
+
+    dispatchUpdateActiveKey(key);
   };
 
   const files = noteKeys.map(k => {
+    const error = errors[k];
+    if (error) {
+      return { key: k, name: k, isEncrypted: true, error };
+    }
+
     const n = noteValues[k];
     if (n) {
       const { title } = n;
-      return { name: title, isEncrypted: false };
+      return { key: k, name: title, isEncrypted: false };
     }
 
-    return { name: k, isEncrypted: true };
+    return { key: k, name: k, isEncrypted: true };
   });
 
   // run on first render
@@ -144,13 +165,14 @@ export default connect(
     activeKey: getActiveKey(state),
     noteKeys: getNoteKeys(state),
     noteValues: getNoteValues(state),
+    errors: getErrors(state),
   }),
   dispatch => ({
     dispatchLogin: () => dispatch(login()),
     dispatchLogout: () => dispatch(logout()),
     dispatchSignUp: () => dispatch(signUp()),
     dispatchNewNote: () => dispatch(newNote()),
-    dispatchUpdateContext: ctx => dispatch(updateContext(ctx)),
+    dispatchLoadNote: key => dispatch(loadNote(key)),
     dispatchUpdateActiveKey: key => dispatch(updateActiveKey(key)),
   }),
 )(App);

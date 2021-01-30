@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faHistory, faSave, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { Editor } from '@toast-ui/react-editor';
 import * as PropTypes from 'prop-types';
-import { noteFromParameters } from './notes';
+import { noteFromParametersFactory } from './notes';
 
 const NoteEditor = ({ activeNote, note = {}, onSave }) => {
   const { title, body } = note;
@@ -29,6 +29,7 @@ const NoteEditor = ({ activeNote, note = {}, onSave }) => {
           onChange={evt => setDraftTitle(evt.target.value)}
         />
       </div>
+{/*
       <div className={'pb-4'}>
         <ButtonToolbar className={'justify-content-between'}>
           <ButtonGroup>
@@ -38,7 +39,7 @@ const NoteEditor = ({ activeNote, note = {}, onSave }) => {
               <Button
                 onClick={async () => {
                   setIsSaving(true);
-                  await onSave(noteFromParameters({ title: draftTitle, body: draftBody }))
+                  await onSave(noteFromParametersFactory({ title: draftTitle, body: draftBody }))
                   setIsSaving(false);
                 }}
               >
@@ -75,7 +76,7 @@ const NoteEditor = ({ activeNote, note = {}, onSave }) => {
           </ButtonGroup>
         </ButtonToolbar>
       </div>
-
+*/}
       <Editor
         ref={ref}
         initialValue={draftBody}

@@ -1,6 +1,6 @@
-import { createContext, createData, deserialize, getKeys, register, serialize } from '../nk-js';
+import { createContext, createData, deserialize, getData, getKeys, register, serialize } from '../nk-js';
 import { createAsyncThunk, createSelector, createSlice } from '@reduxjs/toolkit';
-import { noteToValue, valueToNote } from '../notes';
+import { noteFactory, noteToValue, valueToNote } from '../notes';
 
 // taken from https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
 const newKey = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -41,16 +41,36 @@ export const signUp = createAsyncThunk(
 
 export const newNote = createAsyncThunk(
   'nk/new-note',
-  async (_, { getState }) => {
+  async (_, { getState, rejectWithValue }) => {
     const context = getContext(getState());
     const key = newKey();
-    const note = newNote();
+    const note = noteFactory();
 
-    const newContext = await createData(context, key, noteToValue(note));
+    let newContext;
+    try {
+      newContext = await createData(context, key, noteToValue(note));
+    } catch (error) {
+      return rejectWithValue(error);
+    }
 
-    return { key, note, context };
+    return { key, note, context: newContext };
   },
 );
+
+export const loadNote = createAsyncThunk(
+  'nk/load-note',
+  async (key, { getState, rejectWithValue }) => {
+    const context = getContext(getState());
+    let newContext;
+    try {
+      newContext = await getData(context, key);
+    } catch (error) {
+      return rejectWithValue({ key, error });
+    }
+
+    return { key, context: newContext };
+  }
+)
 
 const parseContextNodes = (plaintextValues) => Object.fromEntries(
   Object.entries(plaintextValues).map(
@@ -60,6 +80,7 @@ const nkSlice = createSlice({
   name: 'nk',
   initialState: {
     isLoggedIn: false,
+    errors: {},
     context: createContext(),
     noteKeys: [],
     noteValues: {},
@@ -114,9 +135,27 @@ const nkSlice = createSlice({
       },
       context
     }),
-    [newNote().rejected]: (state, action) => ({
+    [newNote.rejected]: (state, action) => ({
       // todo: add error
       ...state,
+    }),
+    [loadNote.fulfilled]: (state, { payload: { key, context } }) => ({
+      ...state,
+      errors: {
+        ...state.errors,
+        [key]: undefined,
+      },
+      noteValues: {
+        ...state.noteValues,
+        [key]: valueToNote(context.plaintextValues[key]),
+      }
+    }),
+    [loadNote.rejected]: (state, { payload: { key, error } }) => ({
+      ...state,
+      errors: {
+        ...state.errors,
+        [key]: error,
+      },
     }),
   },
 });
@@ -126,6 +165,7 @@ export const getContext = createSelector(getNk, ({ context }) => context);
 export const getIsLoggedIn = createSelector(getNk, ({ isLoggedIn }) => isLoggedIn);
 export const getNoteKeys = createSelector(getNk, ({ noteKeys }) => noteKeys);
 export const getNoteValues = createSelector(getNk, ({ noteValues }) => noteValues);
+export const getErrors = createSelector(getNk, ({ errors }) => errors);
 
 export const { logout, saveNote, updateContext } = nkSlice.actions;
 export default nkSlice.reducer;

@@ -502,6 +502,8 @@ const getData = async (context, keyName) => {
     throw new Error(`Could not decrypt data: ${error}.`);
   }
 
+  console.log('GET', plaintext)
+
   return contextWithValue(context, keyName, plaintext);
 };
 
