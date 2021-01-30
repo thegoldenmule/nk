@@ -21,7 +21,7 @@ import {
   signUp,
   newNote,
   getNoteKeys,
-  getNoteValues, loadNote, getErrors, getLoading, updateNote
+  getNoteValues, loadNote, getErrors, getLoading, updateNote, echo
 } from './slices/nkSlice';
 import { connect } from 'react-redux';
 import { getActiveKey, updateActiveKey } from './slices/workspaceSlice';
@@ -37,6 +37,8 @@ const getUnloadedKey = (context, errors, loading) => {
 };
 
 function App({
+  dispatchTestEcho,
+
   context, isLoggedIn,
   activeKey, errors, loading, dispatchUpdateActiveKey,
   noteValues, noteKeys,
@@ -72,6 +74,7 @@ function App({
 
   const onSave = async ({ key, note }) => {
     await dispatchUpdateNote({ key, note });
+    //await dispatchTestEcho();
   };
 
   const onSelectNote = async key => {
@@ -165,6 +168,8 @@ export default connect(
     loading: getLoading(state),
   }),
   dispatch => ({
+    dispatchTestEcho: () => dispatch(echo()),
+
     dispatchLogin: () => dispatch(login()),
     dispatchLogout: () => dispatch(logout()),
     dispatchSignUp: () => dispatch(signUp()),

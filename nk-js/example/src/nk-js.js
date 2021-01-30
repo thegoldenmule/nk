@@ -1,14 +1,5 @@
 const uintBufferToBase64String = buffer => btoa(String.fromCharCode.apply(null, buffer));
 const arrayBufferToBase64String = buffer => uintBufferToBase64String(new Uint8Array(buffer));
-const base64StringToUintBuffer = str => {
-  const binary = atob(str);
-  const bytes = new Uint8Array(str.length);
-  for (let i = 0; i < str.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  return bytes;
-}
 
 const arrayBufferToString = buf => {
   return String.fromCharCode.apply(null, new Uint16Array(buf));
@@ -23,6 +14,8 @@ const stringToArrayBuffer = str => {
 
   return buf;
 };
+
+const utils = { arrayBufferToString, stringToArrayBuffer };
 
 const getKeyMaterial = password => crypto.subtle.importKey(
   "raw",
@@ -262,7 +255,7 @@ const contextWithValue = (context, keyName, value) => contextWithKeyNames({
   plaintextValues: {
     ...context.plaintextValues,
     [keyName]: value
-  }
+  },
 }, [...context.keyNames, keyName]);
 
 const isLoggedIn = context => context.userId !== undefined;
@@ -431,6 +424,8 @@ const getKeys = async (context) => {
 };
 
 const createData = async (context, keyName, value) => {
+  console.log('CREATE', value);
+
   const iv = generateIv();
   const { value: cipherValue, signature } = await encrypt(context, iv, value);
 
@@ -440,9 +435,6 @@ const createData = async (context, keyName, value) => {
   form.append('Iv', new Blob([iv]));
   form.append('Sig', new Blob([signature]));
   form.append('Payload', new Blob([cipherValue]));
-
-  console.log(iv);
-  console.log(cipherValue);
 
   // send binary data
   let json;
@@ -508,10 +500,17 @@ const getData = async (context, keyName) => {
 };
 
 const updateData = async (context, keyName, value) => {
-  console.log('PUT')
+  console.log('PUT', value);
 
   const iv = generateIv();
   const { value: cipherValue, signature } = await encrypt(context, iv, value);
+
+  // try to decrypt it
+  const testValue = await decrypt(context, iv, cipherValue);
+  if (value !== testValue) {
+    console.log(value, testValue);
+    throw new Error("Values do not match!")
+  }
 
   const form = new FormData();
   form.append('Iv', new Blob([iv]));
@@ -539,4 +538,4 @@ const updateData = async (context, keyName, value) => {
   return contextWithValue(context, keyName, value);
 };
 
-export { createContext, contextWithConfig, isLoggedIn, register, createData, updateData, getData, getKeys, serialize, deserialize };
+export { utils, createContext, contextWithConfig, isLoggedIn, register, createData, updateData, getData, getKeys, serialize, deserialize };
