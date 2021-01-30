@@ -1,4 +1,14 @@
-import { createContext, createData, deserialize, getData, getKeys, register, serialize, updateData } from '../nk-js';
+import {
+  createContext,
+  createData,
+  deserialize,
+  getData,
+  getKeys,
+  isLoggedIn,
+  register,
+  serialize,
+  updateData
+} from '../nk-js';
 import { createAsyncThunk, createSelector, createSlice } from '@reduxjs/toolkit';
 import { noteFactory, noteToValue, valueToNote } from '../notes';
 
@@ -125,7 +135,7 @@ const nkSlice = createSlice({
   extraReducers: {
     [login.fulfilled]: (state, action) => ({
       ...state,
-      isLoggedIn: true,
+      isLoggedIn: isLoggedIn(action.payload),
       context: action.payload,
       noteKeys: action.payload.keyNames,
       notes: parseContextNodes(action.payload.plaintextValues),
