@@ -82,12 +82,6 @@ namespace TheGoldenMule.Nk.Controllers
         {
             _logger.LogInformation("Received request to create data.", new { userId });
             
-            // read request
-            var key = Request.Form["Key"];
-            var iv = Request.Form.Files["iv"];
-            var sig = Request.Form.Files["Sig"];
-            var payload = Request.Form.Files["Payload"];
-            
             User user;
             try
             {
@@ -102,6 +96,14 @@ namespace TheGoldenMule.Nk.Controllers
                     Success = false
                 };
             }
+            
+            _logger.LogInformation("Received request to create data.", new { userId });
+            
+            // read request
+            var key = Request.Form["Key"];
+            var iv = Request.Form.Files["iv"];
+            var sig = Request.Form.Files["Sig"];
+            var payload = Request.Form.Files["Payload"];
 
             var ivBytes = await GetBytes(iv);
             var payloadBytes = await GetBytes(payload);
@@ -167,7 +169,7 @@ namespace TheGoldenMule.Nk.Controllers
 
         [HttpPut]
         [Route("{userId}/{key}")]
-        public async Task<UpdateDataResponse> Update(string userId, string key, UpdateDataRequest req)
+        public async Task<UpdateDataResponse> Update(string userId, string key)
         {
             User user;
             try
@@ -181,10 +183,18 @@ namespace TheGoldenMule.Nk.Controllers
                     Success = false
                 };
             }
-
-            var payloadBytes = Convert.FromBase64String(req.Payload);
-            var sigBytes = Convert.FromBase64String(req.Sig);
-
+            
+            _logger.LogInformation("Received request to create data.", new { userId });
+            
+            // read request
+            var iv = Request.Form.Files["iv"];
+            var sig = Request.Form.Files["Sig"];
+            var payload = Request.Form.Files["Payload"];
+            
+            var ivBytes = await GetBytes(iv);
+            var payloadBytes = await GetBytes(payload);
+            var sigBytes = await GetBytes(sig);
+            
             if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyChars))
             {
                 return new UpdateDataResponse
@@ -198,7 +208,8 @@ namespace TheGoldenMule.Nk.Controllers
             
             // update
             var data = await _db.Data.SingleAsync(d => d.Key == key);
-            data.Data = req.Payload;
+            data.Data = Encoding.Unicode.GetString(payloadBytes);
+            data.Iv = Encoding.Unicode.GetString(ivBytes);
             _db.Update(data);
             
             await _db.SaveChangesAsync();
