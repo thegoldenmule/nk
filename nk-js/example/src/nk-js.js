@@ -128,9 +128,6 @@ const serializeEncryptionKey = async (key, password) => {
     'AES-KW',
   );
 
-  console.log(salt);
-  console.log(wrapped)
-
   return {
     salt: arrayBufferToString(salt.buffer),
     bytes: arrayBufferToString(wrapped),
@@ -443,6 +440,9 @@ const createData = async (context, keyName, value) => {
   form.append('Iv', new Blob([iv]));
   form.append('Sig', new Blob([signature]));
   form.append('Payload', new Blob([cipherValue]));
+
+  console.log(iv);
+  console.log(cipherValue);
 
   // send binary data
   let json;

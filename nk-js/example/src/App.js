@@ -5,31 +5,27 @@ import {
   Container,
   Row
 } from 'react-bootstrap';
-import { useEffect, useState } from 'react';
-import {
-  createContext,
-  register,
-  createData,
-  serialize,
-  deserialize,
-  updateData,
-  isLoggedIn,
-  getKeys,
-  getData
-} from './nk-js';
+import { useEffect } from 'react';
+
 import 'codemirror/lib/codemirror.css';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
 import ProfileView from './profile';
 import FileBrowser from './files';
 import NoteEditor from './editor';
-import { newNote, noteToValue, valueToNote } from './notes';
-
-// taken from https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
-const newKey = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-  const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-  return v.toString(16);
-});
+import {
+  getContext,
+  getIsLoggedIn,
+  login,
+  logout,
+  signUp,
+  updateContext,
+  newNote,
+  getNoteKeys,
+  getNoteValues
+} from './slices/nkSlice';
+import { connect } from 'react-redux';
+import { getActiveKey, updateActiveKey } from './slices/workspaceSlice';
 
 const getUnloadedKey = context => {
   const { keyNames, plaintextValues } = context;
@@ -40,68 +36,47 @@ const getUnloadedKey = context => {
   }
 };
 
-function App() {
-  const [context, setContext] = useState(createContext());
-  const [activeKey, setActiveKey] = useState('');
-
-  const { keyNames, plaintextValues } = context;
-  const note = valueToNote(plaintextValues[activeKey]);
+function App({
+  context, isLoggedIn, dispatchUpdateContext,
+  activeKey, dispatchUpdateActiveKey,
+  noteValues, noteKeys,
+  dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote,
+}) {
+  const note = noteValues[activeKey];
 
   const onLogin = async () => {
-    const contextData = localStorage.getItem('_context');
-    if (contextData) {
-      let newContext = await deserialize(contextData, '111111');
-      newContext = await getKeys(newContext);
-      setContext(newContext);
-      /*
-      let unloadedKey = getUnloadedKey(newContext);
-      while (unloadedKey) {
-        newContext = await getData(newContext, unloadedKey);
-        unloadedKey = getUnloadedKey(newContext);
-      }
-      */
-    }
+    await dispatchLogin();
   };
 
-  const onLogout = () => {
-    setContext(createContext())
+  const onLogout = async () => {
+    await dispatchLogout();
   };
 
   const onCreateUser = async () => {
-    const newContext = await register(context);
-    setContext(newContext);
-
-    // TODO: ask for passphrase
-    const serialized = await serialize(newContext, '111111');
-
-    // save!
-    localStorage.setItem('_context', serialized);
+    await dispatchSignUp();
   };
 
   const onCreateNote = async () => {
-    const key = newKey();
-    const newContext = await createData(context, key, noteToValue(newNote()));
-
-    setContext(newContext);
-    setActiveKey(key);
+    await dispatchNewNote();
   };
 
   const onSave = async updatedNote => {
-    const newContext = await updateData(context, activeKey, noteToValue(updatedNote));
-    setContext(newContext);
+    /*const newContext = await updateData(context, activeKey, noteToValue(updatedNote));
+    setContext(newContext);*/
   };
 
   const onSelectNote = async key => {
-    const { plaintextValues } = context;
+    /*const { plaintextValues } = context;
     if (!plaintextValues[key]) {
       const newContext = await getData(context, key);
       setContext(newContext);
-    }
+    }*/
   };
 
-  const files = keyNames.map(k => {
-    if (plaintextValues[k]) {
-      const { title } = valueToNote(plaintextValues[k]);
+  const files = noteKeys.map(k => {
+    const n = noteValues[k];
+    if (n) {
+      const { title } = n;
       return { name: title, isEncrypted: false };
     }
 
@@ -110,6 +85,11 @@ function App() {
 
   // run on first render
   useEffect(() => onLogin(), []);
+
+  const unloadedKey = getUnloadedKey(context);
+  if (unloadedKey) {
+    //getData(context, unloadedKey).then(setContext);
+  }
 
   return (
     <Container className={'h-100 mh-100'}>
@@ -121,7 +101,7 @@ function App() {
       />
 
       {
-        isLoggedIn(context) && (
+        isLoggedIn && (
           <Row className={'p-2 h-100'}>
             <Col className={'p-2'} xs={4}>
               <FileBrowser
@@ -144,7 +124,7 @@ function App() {
       }
 
       {
-        !isLoggedIn(context) && (
+        !isLoggedIn && (
           <Row className={'pt-5'}>
             <Col>
               <Alert variant={'dark'}>Register or login to continue.</Alert>
@@ -157,4 +137,20 @@ function App() {
   );
 }
 
-export default App;
+export default connect(
+  state => ({
+    context: getContext(state),
+    isLoggedIn: getIsLoggedIn(state),
+    activeKey: getActiveKey(state),
+    noteKeys: getNoteKeys(state),
+    noteValues: getNoteValues(state),
+  }),
+  dispatch => ({
+    dispatchLogin: () => dispatch(login()),
+    dispatchLogout: () => dispatch(logout()),
+    dispatchSignUp: () => dispatch(signUp()),
+    dispatchNewNote: () => dispatch(newNote()),
+    dispatchUpdateContext: ctx => dispatch(updateContext(ctx)),
+    dispatchUpdateActiveKey: key => dispatch(updateActiveKey(key)),
+  }),
+)(App);
