@@ -426,6 +426,10 @@ const getKeys = async (context) => {
 const createData = async (context, keyName, value) => {
   console.log('CREATE', value);
 
+  if (value.length % 2 === 1) {
+    value += ' ';
+  }
+
   const iv = generateIv();
   const { value: cipherValue, signature } = await encrypt(context, iv, value);
 
@@ -502,16 +506,44 @@ const getData = async (context, keyName) => {
 const updateData = async (context, keyName, value) => {
   console.log('PUT', value);
 
+  if (value.length % 2 === 1) {
+    value += ' ';
+  }
+
   const iv = generateIv();
   const { value: cipherValue, signature } = await encrypt(context, iv, value);
-
-  // try to decrypt it
+/*
+  // TEST: try to decrypt it
   const testValue = await decrypt(context, iv, cipherValue);
   if (value !== testValue) {
     console.log(value, testValue);
     throw new Error("Values do not match!")
   }
 
+  // TEST: compare echo
+  {
+    const echoForm = new FormData();
+    echoForm.append('Payload', new Blob([cipherValue]));
+
+    let echoBuf;
+    const res = await fetch(
+      `${context.url}/utilities/echo`,
+      {
+        method: 'post',
+        body: echoForm,
+      });
+    echoBuf = await res.arrayBuffer();
+
+    const a = new Uint8Array(cipherValue);
+    const b = new Uint8Array(echoBuf);
+    for (let i = 0, len = a.length; i < len; i++) {
+      if (a[i] != b[i]) {
+        console.log('FAILED', a, b);
+        throw new Error(`Values don't match.`);
+      }
+    }
+  }
+*/
   const form = new FormData();
   form.append('Iv', new Blob([iv]));
   form.append('Sig', new Blob([signature]));
