@@ -21,16 +21,16 @@ import {
   signUp,
   newNote,
   getNoteKeys,
-  getNoteValues, loadNote, getErrors
+  getNoteValues, loadNote, getErrors, getLoading
 } from './slices/nkSlice';
 import { connect } from 'react-redux';
 import { getActiveKey, updateActiveKey } from './slices/workspaceSlice';
 import { unwrapResult } from '@reduxjs/toolkit';
 
-const getUnloadedKey = context => {
+const getUnloadedKey = (context, errors, loading) => {
   const { keyNames, plaintextValues } = context;
   for (const key of keyNames) {
-    if (!plaintextValues[key]) {
+    if (!plaintextValues[key] && !errors[key] && !loading[key]) {
       return key;
     }
   }
@@ -38,7 +38,7 @@ const getUnloadedKey = context => {
 
 function App({
   context, isLoggedIn,
-  activeKey, errors, dispatchUpdateActiveKey,
+  activeKey, errors, loading, dispatchUpdateActiveKey,
   noteValues, noteKeys,
   dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote,
 }) {
@@ -91,26 +91,22 @@ function App({
 
   const files = noteKeys.map(k => {
     const error = errors[k];
+    const isLoading = loading[k];
     if (error) {
-      return { key: k, name: k, isEncrypted: true, error };
+      return { key: k, name: k, isEncrypted: true, error, isLoading };
     }
 
     const n = noteValues[k];
     if (n) {
       const { title } = n;
-      return { key: k, name: title, isEncrypted: false };
+      return { key: k, name: title, isEncrypted: false, isLoading };
     }
 
-    return { key: k, name: k, isEncrypted: true };
+    return { key: k, name: k, isEncrypted: true, isLoading };
   });
 
   // run on first render
   useEffect(() => onLogin(), []);
-
-  const unloadedKey = getUnloadedKey(context);
-  if (unloadedKey) {
-    //getData(context, unloadedKey).then(setContext);
-  }
 
   return (
     <Container className={'h-100 mh-100'}>
@@ -166,6 +162,7 @@ export default connect(
     noteKeys: getNoteKeys(state),
     noteValues: getNoteValues(state),
     errors: getErrors(state),
+    loading: getLoading(state),
   }),
   dispatch => ({
     dispatchLogin: () => dispatch(login()),

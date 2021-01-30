@@ -81,6 +81,7 @@ const nkSlice = createSlice({
   initialState: {
     isLoggedIn: false,
     errors: {},
+    loading: {},
     context: createContext(),
     noteKeys: [],
     noteValues: {},
@@ -139,22 +140,40 @@ const nkSlice = createSlice({
       // todo: add error
       ...state,
     }),
+    [loadNote.pending]: (state, action) => {
+      const { meta: { arg } } = action;
+      return {
+        ...state,
+        loading: {
+          ...state.loading,
+          [arg]: true,
+        },
+      };
+    },
     [loadNote.fulfilled]: (state, { payload: { key, context } }) => ({
       ...state,
       errors: {
         ...state.errors,
         [key]: undefined,
       },
+      loading: {
+        ...state.loading,
+        [key]: undefined,
+      },
       noteValues: {
         ...state.noteValues,
         [key]: valueToNote(context.plaintextValues[key]),
-      }
+      },
     }),
     [loadNote.rejected]: (state, { payload: { key, error } }) => ({
       ...state,
       errors: {
         ...state.errors,
         [key]: error,
+      },
+      loading: {
+        ...state.loading,
+        [key]: undefined,
       },
     }),
   },
@@ -166,6 +185,7 @@ export const getIsLoggedIn = createSelector(getNk, ({ isLoggedIn }) => isLoggedI
 export const getNoteKeys = createSelector(getNk, ({ noteKeys }) => noteKeys);
 export const getNoteValues = createSelector(getNk, ({ noteValues }) => noteValues);
 export const getErrors = createSelector(getNk, ({ errors }) => errors);
+export const getLoading = createSelector(getNk, ({ loading }) => loading);
 
 export const { logout, saveNote, updateContext } = nkSlice.actions;
 export default nkSlice.reducer;

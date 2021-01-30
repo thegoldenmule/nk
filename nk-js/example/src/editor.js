@@ -29,54 +29,38 @@ const NoteEditor = ({ activeNote, note = {}, onSave }) => {
           onChange={evt => setDraftTitle(evt.target.value)}
         />
       </div>
-{/*
+
       <div className={'pb-4'}>
         <ButtonToolbar className={'justify-content-between'}>
           <ButtonGroup>
-            <OverlayTrigger overlay={(
-              <Tooltip id={'tt-save'}>Save</Tooltip>
-            )}>
-              <Button
-                onClick={async () => {
-                  setIsSaving(true);
-                  await onSave(noteFromParametersFactory({ title: draftTitle, body: draftBody }))
-                  setIsSaving(false);
-                }}
-              >
-                {
-                  isSaving
-                    ? <Spinner
-                        as={'span'}
-                        animation={'border'}
-                        size={'sm'}
-                        role={'status'}
-                        aria-hidden={'true'}
-                      />
-                    : <FontAwesomeIcon icon={faSave} />
-                }
-              </Button>
-            </OverlayTrigger>
-            <OverlayTrigger overlay={(
-              <Tooltip id={'tt-copy'}>Copy</Tooltip>
-            )}>
-              <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faCopy} /></Button>
-            </OverlayTrigger>
+            <Button
+              onClick={async () => {
+                setIsSaving(true);
+                await onSave(noteFromParametersFactory({ title: draftTitle, body: draftBody }))
+                setIsSaving(false);
+              }}
+            >
+              {
+                isSaving
+                  ? <Spinner
+                    as={'span'}
+                    animation={'border'}
+                    size={'sm'}
+                    role={'status'}
+                    aria-hidden={'true'}
+                  />
+                  : <FontAwesomeIcon icon={faSave} />
+              }
+            </Button>
+            <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faCopy} /></Button>
           </ButtonGroup>
           <ButtonGroup>
-            <OverlayTrigger overlay={(
-              <Tooltip id={'tt-revert'}>Revert</Tooltip>
-            )}>
-              <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faHistory} /></Button>
-            </OverlayTrigger>
-            <OverlayTrigger overlay={(
-              <Tooltip id={'tt-delete'}>Delete</Tooltip>
-            )}>
-              <Button variant={'outline-danger'}><FontAwesomeIcon icon={faTrash} /></Button>
-            </OverlayTrigger>
+            <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faHistory} /></Button>
+            <Button variant={'outline-danger'}><FontAwesomeIcon icon={faTrash} /></Button>
           </ButtonGroup>
         </ButtonToolbar>
       </div>
-*/}
+
       <Editor
         ref={ref}
         initialValue={draftBody}

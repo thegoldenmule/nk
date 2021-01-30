@@ -34,7 +34,16 @@ const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, })
   )];
 
   for (let i = 0, len = files.length; i < len; i++) {
-    const { key, name, isEncrypted, error } = files[i];
+    const { key, name, isEncrypted, error, isLoading } = files[i];
+
+    let content = <span>{name}</span>;
+    if (error) {
+      content = <FontAwesomeIcon icon={faExclamationTriangle} />;
+    } else if (isLoading) {
+      content = <Spinner animation={'border'} size={'sm'} as={'span'} />;
+    } else if (isEncrypted) {
+      content = <FontAwesomeIcon icon={faLock} />;
+    }
 
     listItems.push(
       <ListGroup.Item
@@ -42,17 +51,7 @@ const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, })
         active={activeNote === key}
         onClick={() => onNoteSelected(key)}
       >
-        {
-          error
-            ? (
-              <FontAwesomeIcon icon={faExclamationTriangle} />
-            )
-            : (
-              isEncrypted
-                ? <FontAwesomeIcon icon={faLock} />
-                : <span>{name}</span>
-            )
-        }
+        { content }
       </ListGroup.Item>
     );
   }
