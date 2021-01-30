@@ -12,7 +12,6 @@ namespace TheGoldenMule.Nk.Controllers
     [Route("[controller]")]
     public class ProofController : ControllerBase
     {
-        private readonly zkContext _db = new zkContext();
         private readonly ILogger<ProofController> _logger;
 
         public ProofController(ILogger<ProofController> logger)
@@ -25,7 +24,8 @@ namespace TheGoldenMule.Nk.Controllers
         public async Task<ProofResponse> Create(string userId)
         {
             // look up user
-            var user = await _db.Users.FindAsync(userId);
+            await using var db = new zkContext();
+            var user = await db.Users.FindAsync(userId);
             if (user == null)
             {
                 return new ProofResponse
@@ -38,12 +38,12 @@ namespace TheGoldenMule.Nk.Controllers
             var value = GenerateRandomString(128);
             
             // store
-            await _db.Proofs.AddAsync(new Proof
+            await db.Proofs.AddAsync(new Proof
             {
                 PPlaintext = value,
                 UserId = userId
             });
-            await _db.SaveChangesAsync();
+            await db.SaveChangesAsync();
             
             return new ProofResponse
             {

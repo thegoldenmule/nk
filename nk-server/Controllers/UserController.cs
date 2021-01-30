@@ -13,7 +13,6 @@ namespace TheGoldenMule.Nk.Controllers
     [Route("[controller]")]
     public class UserController : ControllerBase
     {
-        private readonly zkContext _db = new zkContext();
         private readonly ILogger<UserController> _logger;
 
         public UserController(ILogger<UserController> logger)
@@ -41,13 +40,14 @@ namespace TheGoldenMule.Nk.Controllers
                 
                 var id = GenerateUserId();
 
-                await _db.Users.AddAsync(new User
+                await using var db = new zkContext();
+                await db.Users.AddAsync(new User
                 {
                     Id = id,
                     Pk = pk
                 });
                 
-                await _db.SaveChangesAsync();
+                await db.SaveChangesAsync();
                 
                 _logger.LogInformation("Created user successfully.", new { userId = id });
                 

@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +16,6 @@ namespace TheGoldenMule.Nk.Controllers
     [Route("[controller]")]
     public class DataController : ControllerBase
     {
-        private readonly zkContext _db = new zkContext();
         private readonly ILogger<DataController> _logger;
 
         public DataController(ILogger<DataController> logger)
@@ -48,11 +46,14 @@ namespace TheGoldenMule.Nk.Controllers
             var proof = proofs[0];
             var sig = signatures[0];
 
+            // context
+            await using var db = new zkContext();
+            
             // find user
             User user;
             try
             {
-                user = await _db.Users.SingleAsync(u => u.Id == userId);
+                user = await db.Users.SingleAsync(u => u.Id == userId);
             }
             catch (Exception exception)
             {
@@ -60,15 +61,15 @@ namespace TheGoldenMule.Nk.Controllers
             }
 
             // look up proof (this also validates that the userId matches)
-            var persistentProof = await _db.Proofs.SingleAsync(p => p.UserId == userId && p.PPlaintext == proof);
+            var persistentProof = await db.Proofs.SingleAsync(p => p.UserId == userId && p.PPlaintext == proof);
             if (persistentProof == null)
             {
                 throw new Exception("Invalid proof.");
             }
 
             // delete proof
-            _db.Proofs.Remove(persistentProof);
-            await _db.SaveChangesAsync();
+            db.Proofs.Remove(persistentProof);
+            await db.SaveChangesAsync();
 
             // verify signature
             if (!EncryptionUtility.IsValidSig(
@@ -82,9 +83,23 @@ namespace TheGoldenMule.Nk.Controllers
 
         private static async Task<byte[]> GetBytes(IFormFile file)
         {
-            using var stream = new MemoryStream();
+            await using var stream = new MemoryStream();
             await file.CopyToAsync(stream);
             return stream.ToArray();
+        }
+
+        private async Task<Tuple<byte[], byte[], byte[]>> ParseBody()
+        {
+            var iv = Request.Form.Files["Iv"];
+            var ivBytes = await GetBytes(iv);
+            
+            var sig = Request.Form.Files["Sig"];
+            var sigBytes = await GetBytes(sig);
+            
+            var payload = Request.Form.Files["Payload"];
+            var payloadBytes = await GetBytes(payload);
+
+            return Tuple.Create(ivBytes, sigBytes, payloadBytes);
         }
         
         [HttpPost]
@@ -93,10 +108,13 @@ namespace TheGoldenMule.Nk.Controllers
         {
             _logger.LogInformation("Received request to create data.", new { userId });
             
+            // context
+            await using var db = new zkContext();
+            
             User user;
             try
             {
-                user = await _db.Users.SingleAsync(u => u.Id == userId);
+                user = await db.Users.SingleAsync(u => u.Id == userId);
             }
             catch (Exception exception)
             {
@@ -112,15 +130,9 @@ namespace TheGoldenMule.Nk.Controllers
             
             // read request
             var key = Request.Form["Key"];
-            var iv = Request.Form.Files["iv"];
-            var sig = Request.Form.Files["Sig"];
-            var payload = Request.Form.Files["Payload"];
+            var (iv, sig, payload) = await ParseBody();
 
-            var ivBytes = await GetBytes(iv);
-            var payloadBytes = await GetBytes(payload);
-            var sigBytes = await GetBytes(sig);
-
-            if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyChars))
+            if (!EncryptionUtility.IsValidSig(payload, sig, user.PublicKeyChars))
             {
                 _logger.LogInformation($"Could not create data: invalid signature.", new { userId });
                 
@@ -138,13 +150,13 @@ namespace TheGoldenMule.Nk.Controllers
             {
                 UserId = userId,
                 Key = key,
-                Data = BytesToString(ref payloadBytes),
-                Iv = BytesToString(ref ivBytes),
+                Data = BytesToString(ref payload),
+                Iv = BytesToString(ref iv),
             };
             
             try
             {
-                await _db.Data.AddAsync(datum);
+                await db.Data.AddAsync(datum);
             }
             catch (Exception exception)
             {
@@ -158,7 +170,7 @@ namespace TheGoldenMule.Nk.Controllers
 
             try
             {
-                await _db.SaveChangesAsync();
+                await db.SaveChangesAsync();
             }
             catch (Exception exception)
             {
@@ -182,32 +194,33 @@ namespace TheGoldenMule.Nk.Controllers
         [Route("{userId}/{key}")]
         public async Task<UpdateDataResponse> Update(string userId, string key)
         {
+            _logger.LogInformation("Received request to update data.", new { userId });
+            
+            // context
+            await using var db = new zkContext();
+            
             User user;
             try
             {
-                user = await _db.Users.SingleAsync(u => u.Id == userId);
+                user = await db.Users.SingleAsync(u => u.Id == userId);
             }
             catch
             {
+                _logger.LogInformation("Received request to update data.", new { userId });
+                
                 return new UpdateDataResponse
                 {
                     Success = false
                 };
             }
             
-            _logger.LogInformation("Received request to create data.", new { userId });
-            
             // read request
-            var iv = Request.Form.Files["iv"];
-            var sig = Request.Form.Files["Sig"];
-            var payload = Request.Form.Files["Payload"];
-            
-            var ivBytes = await GetBytes(iv);
-            var payloadBytes = await GetBytes(payload);
-            var sigBytes = await GetBytes(sig);
-            
-            if (!EncryptionUtility.IsValidSig(payloadBytes, sigBytes, user.PublicKeyChars))
+            var (iv, sig, payload) = await ParseBody();
+
+            if (!EncryptionUtility.IsValidSig(payload, sig, user.PublicKeyChars))
             {
+                _logger.LogInformation("Could not update data: invalid signature.", new { userId });
+                
                 return new UpdateDataResponse
                 {
                     Success = false
@@ -218,12 +231,14 @@ namespace TheGoldenMule.Nk.Controllers
             // the private key, and they own this data
             
             // update
-            var data = await _db.Data.SingleAsync(d => d.Key == key);
-            data.Data = BytesToString(ref payloadBytes);
-            data.Iv = BytesToString(ref ivBytes);
-            _db.Update(data);
+            var data = await db.Data.SingleAsync(d => d.Key == key);
+            data.Data = BytesToString(ref payload);
+            data.Iv = BytesToString(ref iv);
+            //_db.Update(data);
             
-            await _db.SaveChangesAsync();
+            await db.SaveChangesAsync();
+            
+            _logger.LogInformation("Updated data successfully", new { userId });
 
             return new UpdateDataResponse
             {
@@ -252,7 +267,8 @@ namespace TheGoldenMule.Nk.Controllers
             }
 
             // read all keys
-            var data = await _db.Data.Where(d => d.UserId == userId).ToListAsync();
+            await using var db = new zkContext();
+            var data = await db.Data.Where(d => d.UserId == userId).ToListAsync();
 
             return new GetKeysResponse
             {
@@ -276,7 +292,8 @@ namespace TheGoldenMule.Nk.Controllers
             }
 
             // now look up the data
-            var data = await _db.Data.SingleAsync(d => d.UserId == userId && d.Key == key);
+            await using var db = new zkContext();
+            var data = await db.Data.SingleAsync(d => d.UserId == userId && d.Key == key);
 
             await Response.Body.WriteAsync(StringToBytes(data.Iv));
             await Response.Body.WriteAsync(StringToBytes(data.Data));

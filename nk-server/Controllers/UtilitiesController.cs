@@ -42,6 +42,20 @@ namespace TheGoldenMule.Nk.Controllers
         }
         
         [HttpPost]
+        public CreateKeyPairResponse Create()
+        {
+            var rsa = RSA.Create();
+            var privateKey = rsa.ExportRSAPrivateKey();
+            var publicKey = rsa.ExportRSAPublicKey();
+
+            return new CreateKeyPairResponse
+            {
+                Public = Convert.ToBase64String(publicKey),
+                Private = Convert.ToBase64String(privateKey)
+            };
+        }
+        
+        [HttpPost]
         [Route("encrypt")]
         public EncryptPayloadResponse Encrypt(EncryptPayloadRequest req)
         {
