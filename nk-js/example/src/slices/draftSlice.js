@@ -4,6 +4,7 @@ const initialState = {
   key: '',
   title: '',
   body: '',
+  newDraft: false,
 };
 
 const draftSlice =  createSlice(

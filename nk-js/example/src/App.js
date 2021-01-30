@@ -44,8 +44,6 @@ function App({
   draft,
   dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote, dispatchUpdateNote,
 }) {
-  const note = noteValues[activeKey];
-
   const onLogin = async () => {
     await dispatchLogin();
   };

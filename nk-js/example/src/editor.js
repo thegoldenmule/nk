@@ -9,18 +9,25 @@ import {
   getDraft,
   getDraftBody,
   getDraftKey,
-  getDraftTitle,
+  getDraftTitle, newDraftUpdatedInternal,
   updateBody,
   updateTitle
 } from './slices/draftSlice';
 import { getNoteStatuses, noteStatus } from './slices/nkSlice';
-import { getActiveKey } from './slices/workspaceSlice';
 
-const NoteEditor = ({ onSave, isSaving, activeKey: key, title, body, dispatchUpdateTitle, dispatchUpdateBody }) => {
+const NoteEditor = ({ onSave, isSaving, draft: { key, title, body, newDraft }, dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody }) => {
   const ref = useRef(null);
 
   if (!key) {
     return null;
+  }
+
+  if (newDraft) {
+    if (ref.current) {
+      ref.current.getInstance().setMarkdown(body);
+    }
+
+    dispatchNewDraftInternal();
   }
 
   return (
@@ -82,13 +89,12 @@ const NoteEditor = ({ onSave, isSaving, activeKey: key, title, body, dispatchUpd
 
 export default connect(
   state => ({
-    activeKey: getDraftKey(state),
-    title: getDraftTitle(state),
-    body: getDraftBody(state),
+    draft: getDraft(state),
     isSaving: getNoteStatuses(state)[getDraftKey(state)] === noteStatus.loading,
   }),
   dispatch => ({
     dispatchUpdateTitle: title => dispatch(updateTitle(title)),
     dispatchUpdateBody: body => dispatch(updateBody(body)),
+    dispatchNewDraftInternal: () => dispatch(newDraftUpdatedInternal()),
   }),
 )(NoteEditor);
