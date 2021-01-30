@@ -243,7 +243,15 @@ namespace TheGoldenMule.Nk.Controllers
         [Route("{userId}/{key}")]
         public async Task Get(string userId, string key)
         {
-            // TODO: verify proof
+            try
+            {
+                await CheckSignature(userId);
+            }
+            catch
+            {
+                Response.StatusCode = 401;
+                return;
+            }
 
             // now look up the data
             var data = await _db.Data.SingleAsync(d => d.UserId == userId && d.Key == key);
