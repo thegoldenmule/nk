@@ -21,27 +21,24 @@ import {
   signUp,
   newNote,
   getNoteKeys,
-  getNoteValues, loadNote, getErrors, getLoading, updateNote, echo
+  getNoteValues, loadNote, updateNote, getNoteStatuses, noteStatus
 } from './slices/nkSlice';
 import { connect } from 'react-redux';
 import { getActiveKey, updateActiveKey } from './slices/workspaceSlice';
 import { unwrapResult } from '@reduxjs/toolkit';
 
-const getUnloadedKey = (context, errors, loading) => {
-  const { keyNames, plaintextValues } = context;
-  for (const key of keyNames) {
-    if (!plaintextValues[key] && !errors[key] && !loading[key]) {
-      return key;
+const getUnloadedKey = (noteStatuses) => {
+  for (const [k, status] of Object.entries(noteStatuses)) {
+    if (status === noteStatus.unloaded) {
+      return k;
     }
   }
 };
 
 function App({
-  dispatchTestEcho,
-
   context, isLoggedIn,
-  activeKey, errors, loading, dispatchUpdateActiveKey,
-  noteValues, noteKeys,
+  activeKey, dispatchUpdateActiveKey,
+  noteKeys, noteValues, noteStatuses,
   dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote, dispatchUpdateNote,
 }) {
   const note = noteValues[activeKey];
@@ -74,7 +71,6 @@ function App({
 
   const onSave = async ({ key, note }) => {
     await dispatchUpdateNote({ key, note });
-    //await dispatchTestEcho();
   };
 
   const onSelectNote = async key => {
@@ -93,23 +89,24 @@ function App({
   };
 
   const files = noteKeys.map(k => {
-    const error = errors[k];
-    const isLoading = loading[k];
-    if (error) {
-      return { key: k, name: k, isEncrypted: true, error, isLoading };
-    }
+    const status = noteStatuses[k];
 
     const n = noteValues[k];
     if (n) {
       const { title } = n;
-      return { key: k, name: title, isEncrypted: false, isLoading };
+      return { key: k, name: title, status };
     }
 
-    return { key: k, name: k, isEncrypted: true, isLoading };
+    return { key: k, name: k, status };
   });
 
   // run on first render
   useEffect(() => onLogin(), []);
+
+  const unloadedNote = getUnloadedKey(noteStatuses);
+  if (unloadedNote) {
+    //dispatchLoadNote(unloadedNote);
+  }
 
   return (
     <Container className={'h-100 mh-100'}>
@@ -164,12 +161,9 @@ export default connect(
     activeKey: getActiveKey(state),
     noteKeys: getNoteKeys(state),
     noteValues: getNoteValues(state),
-    errors: getErrors(state),
-    loading: getLoading(state),
+    noteStatuses: getNoteStatuses(state),
   }),
   dispatch => ({
-    dispatchTestEcho: () => dispatch(echo()),
-
     dispatchLogin: () => dispatch(login()),
     dispatchLogout: () => dispatch(logout()),
     dispatchSignUp: () => dispatch(signUp()),

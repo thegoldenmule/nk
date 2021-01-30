@@ -12,13 +12,19 @@ import {
 import { createAsyncThunk, createSelector, createSlice } from '@reduxjs/toolkit';
 import { noteFactory, noteToValue, valueToNote } from '../notes';
 
+export const noteStatus = {
+  unloaded: 'unloaded',
+  loading: 'loading',
+  loaded: 'loaded',
+  error: 'error',
+};
+
 const initialState = {
   isLoggedIn: false,
-  errors: {},
-  loading: {},
   context: createContext(),
   noteKeys: [],
   noteValues: {},
+  noteStatuses: {},
 };
 
 // taken from https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
@@ -177,6 +183,7 @@ const nkSlice = createSlice({
       context: action.payload,
       noteKeys: action.payload.keyNames,
       notes: parseContextNodes(action.payload.plaintextValues),
+      noteStatuses: Object.fromEntries(action.payload.keyNames.map(n => [n, action.payload.plaintextValues[n] ? noteStatus.loaded : noteStatus.unloaded])),
     }),
     [login.rejected]: (state, action) => ({
       // todo: add error
@@ -191,6 +198,17 @@ const nkSlice = createSlice({
       // todo: add error
       ...state,
     }),
+    [newNote.pending]: (state, action) => {
+      const { meta: { arg } } = action;
+
+      return {
+        ...state,
+        noteStatuses: {
+          ...state.noteStatuses,
+          [arg]: noteStatus.loading,
+        },
+      };
+    },
     [newNote.fulfilled]: (state, { payload: { key, note, context } }) => ({
       ...state,
       noteKeys: context.keyNames,
@@ -198,46 +216,42 @@ const nkSlice = createSlice({
         ...state.noteValues,
         [key]: note,
       },
+      noteStatus: {
+        ...state.noteStatuses,
+        [key]: noteStatus.loaded,
+      },
       context
     }),
     [newNote.rejected]: (state, action) => ({
-      // todo: add error
       ...state,
+      // TODO: add error
     }),
     [loadNote.pending]: (state, action) => {
       const { meta: { arg } } = action;
       return {
         ...state,
-        loading: {
-          ...state.loading,
-          [arg]: true,
+        nodeStatuses: {
+          ...state.noteStatuses,
+          [arg]: noteStatus.loading,
         },
       };
     },
     [loadNote.fulfilled]: (state, { payload: { key, context } }) => ({
       ...state,
-      errors: {
-        ...state.errors,
-        [key]: undefined,
-      },
-      loading: {
-        ...state.loading,
-        [key]: undefined,
-      },
       noteValues: {
         ...state.noteValues,
         [key]: valueToNote(context.plaintextValues[key]),
       },
+      noteStatuses: {
+        ...state.noteStatuses,
+        [key]: noteStatus.loaded
+      },
     }),
     [loadNote.rejected]: (state, { payload: { key, error } }) => ({
       ...state,
-      errors: {
-        ...state.errors,
-        [key]: error,
-      },
-      loading: {
-        ...state.loading,
-        [key]: undefined,
+      noteStatuses: {
+        ...state.noteStatuses,
+        [key]: noteStatus.error
       },
     }),
     [updateNote.fulfilled]: (state, { payload: { key, context } }) => {
@@ -247,8 +261,10 @@ const nkSlice = createSlice({
       };
     },
     [updateNote.rejected]: (state, { key, error }) => {
-      // TODO
-      return state;
+      return {
+        ...state,
+        // TODO: add error
+      };
     }
   },
 });
@@ -258,8 +274,7 @@ export const getContext = createSelector(getNk, ({ context }) => context);
 export const getIsLoggedIn = createSelector(getNk, ({ isLoggedIn }) => isLoggedIn);
 export const getNoteKeys = createSelector(getNk, ({ noteKeys }) => noteKeys);
 export const getNoteValues = createSelector(getNk, ({ noteValues }) => noteValues);
-export const getErrors = createSelector(getNk, ({ errors }) => errors);
-export const getLoading = createSelector(getNk, ({ loading }) => loading);
+export const getNoteStatuses = createSelector(getNk, ({ noteStatuses }) => noteStatuses);
 
-export const { logout, saveNote, updateContext } = nkSlice.actions;
+export const { logout, saveNote } = nkSlice.actions;
 export default nkSlice.reducer;

@@ -2,6 +2,7 @@ import { Button, FormControl, InputGroup, ListGroup, Spinner } from 'react-boots
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExclamationTriangle, faLock, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { useState } from 'react';
+import { noteStatus } from './slices/nkSlice';
 
 const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, }) => {
   // state
@@ -34,15 +35,26 @@ const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, })
   )];
 
   for (let i = 0, len = files.length; i < len; i++) {
-    const { key, name, isEncrypted, error, isLoading } = files[i];
+    const { key, name, status } = files[i];
 
-    let content = <span>{name}</span>;
-    if (error) {
-      content = <FontAwesomeIcon icon={faExclamationTriangle} />;
-    } else if (isLoading) {
-      content = <Spinner animation={'border'} size={'sm'} as={'span'} />;
-    } else if (isEncrypted) {
-      content = <FontAwesomeIcon icon={faLock} />;
+    let content;
+    switch (status) {
+      case noteStatus.error: {
+        content = <FontAwesomeIcon icon={faExclamationTriangle}/>;
+        break;
+      }
+      case noteStatus.loading: {
+        content = <Spinner animation={'border'} size={'sm'} as={'span'}/>;
+        break;
+      }
+      case noteStatus.unloaded: {
+        content = <FontAwesomeIcon icon={faLock}/>;
+        break;
+      }
+      default: {
+        content = <span>{name}</span>;
+        break;
+      }
     }
 
     listItems.push(
