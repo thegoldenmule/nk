@@ -36,7 +36,10 @@ const NoteEditor = ({ activeNote, note = {}, onSave }) => {
             <Button
               onClick={async () => {
                 setIsSaving(true);
-                await onSave(noteFromParametersFactory({ title: draftTitle, body: draftBody }))
+                await onSave({
+                  key: activeNote,
+                  note: noteFromParametersFactory({title: draftTitle, body: draftBody}),
+                });
                 setIsSaving(false);
               }}
             >

@@ -1,4 +1,4 @@
-import { createContext, createData, deserialize, getData, getKeys, register, serialize } from '../nk-js';
+import { createContext, createData, deserialize, getData, getKeys, register, serialize, updateData } from '../nk-js';
 import { createAsyncThunk, createSelector, createSlice } from '@reduxjs/toolkit';
 import { noteFactory, noteToValue, valueToNote } from '../notes';
 
@@ -70,6 +70,22 @@ export const loadNote = createAsyncThunk(
 
     return { key, context: newContext };
   }
+);
+
+export const updateNote = createAsyncThunk(
+  'nk/update-note',
+  async ({ key, note }, { getState, rejectedWithValue }) => {
+    const value = noteToValue(note);
+    const context = getContext(getState());
+    let newContext;
+    try {
+      newContext = await updateData(context, key, value);
+    } catch (error) {
+      return rejectedWithValue({ key, error });
+    }
+
+    return { key, context: newContext };
+  },
 )
 
 const parseContextNodes = (plaintextValues) => Object.fromEntries(
@@ -176,6 +192,15 @@ const nkSlice = createSlice({
         [key]: undefined,
       },
     }),
+    [updateNote.fulfilled]: (state, { payload: { key, context } }) => {
+      return {
+        ...state,
+      };
+    },
+    [updateNote.rejected]: (state, { key, error }) => {
+      // TODO
+      return state;
+    }
   },
 });
 

@@ -508,7 +508,15 @@ const getData = async (context, keyName) => {
 };
 
 const updateData = async (context, keyName, value) => {
-  const { value: cipherValue, signature } = await encrypt(context, value);
+  console.log('PUT')
+
+  const iv = generateIv();
+  const { value: cipherValue, signature } = await encrypt(context, iv, value);
+
+  const form = new FormData();
+  form.append('Iv', new Blob([iv]));
+  form.append('Sig', new Blob([signature]));
+  form.append('Payload', new Blob([cipherValue]));
 
   // send
   let json;
@@ -516,15 +524,7 @@ const updateData = async (context, keyName, value) => {
     const res = await fetch(`${context.url}/data/${context.userId}/${keyName}`,
       {
         method: 'put',
-        body: JSON.stringify({
-          Key: keyName,
-          Payload: cipherValue,
-          Sig: signature,
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        body: form
       });
 
     json = await res.json();
