@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Button, ButtonGroup, ButtonToolbar, Form, OverlayTrigger, Spinner, Tooltip } from 'react-bootstrap';
+import { useEffect, useRef, useState } from 'react';
+import { Button, ButtonGroup, ButtonToolbar, Form, Modal, OverlayTrigger, Spinner, Tooltip } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faHistory, faSave, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { Editor } from '@toast-ui/react-editor';
@@ -12,6 +12,7 @@ import {
   updateTitle
 } from './slices/draftSlice';
 import { getNoteStatuses, noteStatus } from './slices/nkSlice';
+import { BugIcon } from '@primer/octicons-react';
 
 const NoteEditor = ({
   onSave, onDelete, isSaving,
@@ -21,6 +22,7 @@ const NoteEditor = ({
   const { title, body, lastUpdatedAt, } = drafts[key] || {};
 
   const ref = useRef(null);
+  const [showDelete, setShowDelete] = useState(false);
 
   useEffect(() => {
     if (newDraft) {
@@ -41,6 +43,21 @@ const NoteEditor = ({
 
   return (
     <div>
+      <Modal show={showDelete} onHide={() => setShowDelete(false)}>
+        <Modal.Header>Confirm</Modal.Header>
+        <Modal.Body>
+          <p>{`Are you sure you want to permanently delete '${title}'? There will be no way to recover this note.`}</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant={'secondary'} onClick={() => setShowDelete(false)}>Close</Button>
+          <Button variant={'primary'} onClick={async () => {
+            await onDelete(key);
+
+            setShowDelete(false);
+          }}>Delete</Button>
+        </Modal.Footer>
+      </Modal>
+
       <div className={'pb-4'}>
         <Form.Control
           size={'lg'}
@@ -80,7 +97,7 @@ const NoteEditor = ({
             ><FontAwesomeIcon icon={faHistory} /></Button>
             <Button
               variant={'outline-danger'}
-              onClick={async () => await onDelete(key)}
+              onClick={() => setShowDelete(true)}
             ><FontAwesomeIcon icon={faTrash} /></Button>
           </ButtonGroup>
         </ButtonToolbar>
