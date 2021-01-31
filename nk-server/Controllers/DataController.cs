@@ -298,5 +298,49 @@ namespace TheGoldenMule.Nk.Controllers
             await Response.Body.WriteAsync(StringToBytes(data.Iv));
             await Response.Body.WriteAsync(StringToBytes(data.Data));
         }
+
+        [HttpDelete]
+        [Route("{userId}/{key}")]
+        public async Task<DeleteDataResponse> Delete(string userId, string key)
+        {
+            _logger.LogInformation("Delete data requested.", new { userId });
+            
+            try
+            {
+                await CheckSignature(userId);
+            }
+            catch
+            {
+                _logger.LogInformation("Could not delete key: invalid signature.", new { userId });
+
+                return new DeleteDataResponse
+                {
+                    Success = false,
+                };
+            }
+
+            await using var db = new zkContext();
+
+            var datum = await db.Data.FirstOrDefaultAsync(d => d.Key == key && d.UserId == userId);
+            if (datum == null)
+            {
+                _logger.LogInformation("Could not delete key: data not found.", new { userId });
+
+                return new DeleteDataResponse
+                {
+                    Success = false,
+                };
+            }
+
+            db.Data.Remove(datum);
+            await db.SaveChangesAsync();
+
+            _logger.LogInformation("Successfully deleted data.", new { userId });
+            
+            return new DeleteDataResponse
+            {
+                Success = true,
+            };
+        }
     }
 }
