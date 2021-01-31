@@ -74,8 +74,8 @@ function App({
     await dispatchUpdateNote({
       key: activeKey,
       note: noteFromParametersFactory({
-        title: draft.title,
-        body: draft.body,
+        title: draft.drafts[activeKey].title,
+        body: draft.drafts[activeKey].body,
       }),
     });
   };

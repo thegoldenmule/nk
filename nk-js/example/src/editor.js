@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button, ButtonGroup, ButtonToolbar, Form, OverlayTrigger, Spinner, Tooltip } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faHistory, faSave, faTrash } from '@fortawesome/free-solid-svg-icons';
@@ -14,20 +14,22 @@ import {
 import { getNoteStatuses, noteStatus } from './slices/nkSlice';
 
 const NoteEditor = ({ onSave, isSaving, draft: { key, drafts, newDraft }, dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody }) => {
+  const { title, body } = drafts[key] || {};
+
   const ref = useRef(null);
+
+  useEffect(() => {
+    if (newDraft) {
+      if (ref.current) {
+        ref.current.getInstance().setMarkdown(body);
+      }
+
+      dispatchNewDraftInternal();
+    }
+  });
 
   if (!key) {
     return null;
-  }
-
-  const { title, body } = drafts[key];
-
-  if (newDraft) {
-    if (ref.current) {
-      ref.current.getInstance().setMarkdown(body);
-    }
-
-    dispatchNewDraftInternal();
   }
 
   return (
@@ -81,7 +83,14 @@ const NoteEditor = ({ onSave, isSaving, draft: { key, drafts, newDraft }, dispat
         height='600px'
         initialEditType='wysiwyg'
         useCommandShortcut={true}
-        onChange={() => dispatchUpdateBody(ref.current.getInstance().getMarkdown())}
+        onChange={() => {
+          const contents = ref.current.getInstance().getMarkdown();
+          if (body === contents) {
+            return;
+          }
+
+          dispatchUpdateBody(contents);
+        }}
       />
     </div>
   );
