@@ -1,4 +1,14 @@
-import { createSelector, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSelector, createSlice } from '@reduxjs/toolkit';
+import { loadNote } from './nkSlice';
+
+export const loadAll = createAsyncThunk(
+  'workspace/loadAll',
+  async (keys, { getState, dispatch }) => {
+    for (const key of keys) {
+      await dispatch(loadNote(key));
+    }
+  },
+);
 
 const workspaceSlice = createSlice({
   name: 'workspace',

@@ -24,18 +24,11 @@ import {
   getNoteValues, loadNote, updateNote, getNoteStatuses, noteStatus
 } from './slices/nkSlice';
 import { connect } from 'react-redux';
-import { getActiveKey, updateActiveKey } from './slices/workspaceSlice';
+import { getActiveKey, loadAll, updateActiveKey } from './slices/workspaceSlice';
 import { unwrapResult } from '@reduxjs/toolkit';
 import { draftSaved, getDraft, newDraft } from './slices/draftSlice';
 import { noteFromParametersFactory } from './notes';
-
-const getUnloadedKey = (noteStatuses) => {
-  for (const [k, status] of Object.entries(noteStatuses)) {
-    if (status === noteStatus.unloaded) {
-      return k;
-    }
-  }
-};
+import { getKeys } from './nk-js';
 
 function App({
   context, isLoggedIn,
@@ -115,7 +108,8 @@ function App({
 
   const files = sortedKeys.map(k => {
     const status = noteStatuses[k];
-    const { isDirty, lastUpdatedAt } = draft.drafts[k] || {};
+    const { isDirty } = draft.drafts[k] || {};
+    const { lastUpdatedAt } = noteValues[k] || {};
 
     const n = noteValues[k];
     if (n) {
@@ -128,11 +122,6 @@ function App({
 
   // run on first render
   useEffect(() => onLogin(), []);
-
-  const unloadedNote = getUnloadedKey(noteStatuses);
-  if (unloadedNote) {
-    //dispatchLoadNote(unloadedNote);
-  }
 
   return (
     <Container className={'h-100 mh-100'}>
@@ -187,7 +176,18 @@ export default connect(
     draft: getDraft(state),
   }),
   dispatch => ({
-    dispatchLogin: () => dispatch(login()),
+    dispatchLogin: async () => {
+      const res = await dispatch(login());
+
+      let ctx;
+      try {
+        ctx = await unwrapResult(res);
+      } catch (error) {
+        return;
+      }
+
+      await dispatch(loadAll(ctx.keyNames));
+    },
     dispatchLogout: () => dispatch(logout()),
     dispatchSignUp: () => dispatch(signUp()),
     dispatchNewNote: () => dispatch(newNote()),
