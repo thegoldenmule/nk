@@ -13,7 +13,11 @@ import {
 } from './slices/draftSlice';
 import { getNoteStatuses, noteStatus } from './slices/nkSlice';
 
-const NoteEditor = ({ onSave, isSaving, draft: { key, drafts, newDraft }, dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody }) => {
+const NoteEditor = ({
+  onSave, onDelete, isSaving,
+  draft: { key, drafts, newDraft },
+  dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody }) => {
+
   const { title, body, lastUpdatedAt, } = drafts[key] || {};
 
   const ref = useRef(null);
@@ -52,9 +56,7 @@ const NoteEditor = ({ onSave, isSaving, draft: { key, drafts, newDraft }, dispat
           <ButtonGroup>
             <Button
               onClick={async () => {
-                //setIsSaving(true);
                 await onSave({ key, title, body });
-                //setIsSaving(false);
               }}
             >
               {
@@ -73,8 +75,13 @@ const NoteEditor = ({ onSave, isSaving, draft: { key, drafts, newDraft }, dispat
           </ButtonGroup>
           <p className={'mb-0 mt-2'}><small>Last saved {lastUpdateTime.toLocaleString('en-US')}</small></p>
           <ButtonGroup>
-            <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faHistory} /></Button>
-            <Button variant={'outline-danger'}><FontAwesomeIcon icon={faTrash} /></Button>
+            <Button
+              variant={'outline-secondary'}
+            ><FontAwesomeIcon icon={faHistory} /></Button>
+            <Button
+              variant={'outline-danger'}
+              onClick={async () => await onDelete(key)}
+            ><FontAwesomeIcon icon={faTrash} /></Button>
           </ButtonGroup>
         </ButtonToolbar>
       </div>

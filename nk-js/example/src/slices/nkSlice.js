@@ -1,6 +1,6 @@
 import {
   createContext,
-  createData,
+  createData, deleteData,
   deserialize,
   getData,
   getKeys,
@@ -17,6 +17,7 @@ export const noteStatus = {
   loading: 'loading',
   loaded: 'loaded',
   saving: 'saving',
+  deleting: 'deleting',
   error: 'error',
 };
 
@@ -121,6 +122,20 @@ export const updateNote = createAsyncThunk(
     }
 
     return { key, note, context: newContext };
+  },
+);
+
+export const deleteNote = createAsyncThunk(
+  'nk/delete-note',
+  async (key, { getState, rejectedWithValue }) => {
+    let newContext;
+    try {
+      newContext = await deleteData(getContext(getState()), key);
+    } catch (error) {
+      return rejectedWithValue({ key, error });
+    }
+
+    return { key, context: newContext };
   },
 );
 
@@ -286,7 +301,37 @@ const nkSlice = createSlice({
           [key]: noteStatus.error,
         },
       };
-    }
+    },
+    [deleteNote.pending]: (state, { meta: { arg: key } }) => ({
+      ...state,
+      noteStatuses: {
+        ...state.noteStatuses,
+        [key]: noteStatus.deleting,
+      },
+    }),
+    [deleteNote.fulfilled]: (state, { payload: { key, context } }) => {
+      const {
+        noteStatuses: { [key]: s, ...noteStatuses },
+        noteValues: { [key]: v, ...noteValues },
+      } = state;
+
+      const { keyNames: noteKeys } = context;
+
+      return {
+        ...state,
+        context,
+        noteKeys,
+        noteStatuses,
+        noteValues,
+      };
+    },
+    [deleteNote.rejected]: (state, { key }) => ({
+      ...state,
+      noteStatuses: {
+        ...state.noteStatuses,
+        [key]: noteStatus.error,
+      },
+    }),
   },
 });
 

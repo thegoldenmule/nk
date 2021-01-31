@@ -262,6 +262,22 @@ const contextWithValue = (context, keyName, value) => contextWithKeyNames({
   },
 }, [...context.keyNames, keyName]);
 
+const contextWithoutKey = (context, keyName) => {
+  const keyNames = [...context.keyNames];
+  const keyIndex = keyNames.indexOf(keyName);
+  if (-1 !== keyIndex) {
+    keyNames.splice(keyIndex, 1);
+  }
+
+  const { plaintextValues: { [keyName]: _, ...rest } } = context;
+
+  return {
+    ...context,
+    keyNames,
+    plaintextValues: rest,
+  };
+};
+
 const isLoggedIn = context => context.userId !== undefined;
 
 const encrypt = async (context, iv, value) => {
@@ -504,38 +520,7 @@ const updateData = async (context, keyName, value) => {
 
   const iv = generateIv();
   const { value: cipherValue, signature } = await encrypt(context, iv, value);
-/*
-  // TEST: try to decrypt it
-  const testValue = await decrypt(context, iv, cipherValue);
-  if (value !== testValue) {
-    console.log(value, testValue);
-    throw new Error("Values do not match!")
-  }
 
-  // TEST: compare echo
-  {
-    const echoForm = new FormData();
-    echoForm.append('Payload', new Blob([cipherValue]));
-
-    let echoBuf;
-    const res = await fetch(
-      `${context.url}/utilities/echo`,
-      {
-        method: 'post',
-        body: echoForm,
-      });
-    echoBuf = await res.arrayBuffer();
-
-    const a = new Uint8Array(cipherValue);
-    const b = new Uint8Array(echoBuf);
-    for (let i = 0, len = a.length; i < len; i++) {
-      if (a[i] != b[i]) {
-        console.log('FAILED', a, b);
-        throw new Error(`Values don't match.`);
-      }
-    }
-  }
-*/
   const form = new FormData();
   form.append('Iv', new Blob([iv]));
   form.append('Sig', new Blob([signature]));
@@ -562,5 +547,27 @@ const updateData = async (context, keyName, value) => {
   return contextWithValue(context, keyName, value);
 };
 
+const deleteData = async (context, keyName) => {
+  let json;
+  try {
+    const res = await proveFetch(
+      context,
+      `${context.url}/data/${context.userId}/${keyName}`,
+      {
+        method: 'delete'
+      });
+
+    json = await res.json();
+  } catch (error) {
+    throw new Error(`Could not delete data: ${error}.`);
+  }
+
+  if (!json.success) {
+    throw new Error('Could not delete data: server returned false.');
+  }
+
+  return contextWithoutKey(context, keyName);
+};
+
 const utils = { arrayBufferToString, stringToArrayBuffer };
-export { utils, createContext, contextWithConfig, isLoggedIn, register, createData, updateData, getData, getKeys, serialize, deserialize };
+export { utils, createContext, contextWithConfig, isLoggedIn, register, createData, updateData, getData, deleteData, getKeys, serialize, deserialize };

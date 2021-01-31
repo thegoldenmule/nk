@@ -21,7 +21,7 @@ import {
   signUp,
   newNote,
   getNoteKeys,
-  getNoteValues, loadNote, updateNote, getNoteStatuses, noteStatus
+  getNoteValues, loadNote, updateNote, getNoteStatuses, noteStatus, deleteNote
 } from './slices/nkSlice';
 import { connect } from 'react-redux';
 import { getActiveKey, loadAll, updateActiveKey } from './slices/workspaceSlice';
@@ -35,8 +35,25 @@ function App({
   activeKey, dispatchUpdateActiveKey,
   noteKeys, noteValues, noteStatuses,
   draft,
-  dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote, dispatchUpdateNote,
+  dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote, dispatchUpdateNote, dispatchDeleteNote,
 }) {
+  // sort list of keys by last update
+  const sortedKeys = [...noteKeys];
+  sortedKeys.sort((i, j) => {
+    const a = noteValues[i];
+    const b = noteValues[j];
+
+    if (!a) {
+      return 1;
+    }
+
+    if (!b) {
+      return -1;
+    }
+
+    return b.lastUpdatedAt - a.lastUpdatedAt;
+  });
+
   const onLogin = async () => {
     await dispatchLogin();
   };
@@ -73,6 +90,21 @@ function App({
     });
   };
 
+  const onDelete = async () => {
+    await dispatchDeleteNote(activeKey);
+
+    // select next note
+    for (let i = 0, len = sortedKeys.length; i < len; i++) {
+      const k = sortedKeys[i];
+      if (k !== activeKey) {
+        return await dispatchUpdateActiveKey({
+          key: k,
+          note: noteValues[k],
+        });
+      }
+    }
+  };
+
   const onSelectNote = async key => {
     let note = noteValues[key];
     if (!note) {
@@ -89,22 +121,6 @@ function App({
 
     dispatchUpdateActiveKey({ key, note });
   };
-
-  const sortedKeys = [...noteKeys];
-  sortedKeys.sort((i, j) => {
-    const a = noteValues[i];
-    const b = noteValues[j];
-
-    if (!a) {
-      return 1;
-    }
-
-    if (!b) {
-      return -1;
-    }
-
-    return b.lastUpdatedAt - a.lastUpdatedAt;
-  });
 
   const files = sortedKeys.map(k => {
     const status = noteStatuses[k];
@@ -145,7 +161,7 @@ function App({
             </Col>
 
             <Col className={'p-2 h-100'}>
-              <NoteEditor onSave={onSave} />
+              <NoteEditor onSave={onSave} onDelete={onDelete} />
             </Col>
           </Row>
         )
@@ -196,6 +212,9 @@ export default connect(
       const res = await dispatch(updateNote({ key, note }));
       dispatch(draftSaved(key))
       return res;
+    },
+    dispatchDeleteNote: async (key) => {
+      await dispatch(deleteNote(key));
     },
     dispatchUpdateActiveKey: ({ key, note }) => {
       dispatch(updateActiveKey(key));
