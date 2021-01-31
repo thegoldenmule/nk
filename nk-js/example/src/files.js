@@ -1,4 +1,4 @@
-import { Button, FormControl, InputGroup, ListGroup, Spinner } from 'react-bootstrap';
+import { Button, Col, Container, FormControl, InputGroup, ListGroup, Row, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExclamationTriangle, faLock, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { useState } from 'react';
@@ -35,7 +35,9 @@ const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, })
   )];
 
   for (let i = 0, len = files.length; i < len; i++) {
-    const { key, name, status } = files[i];
+    const { key, name, lastUpdatedAt, status } = files[i];
+    const lastUpdateTime = new Date();
+    lastUpdateTime.setTime(lastUpdatedAt);
 
     let content;
     switch (status) {
@@ -52,7 +54,19 @@ const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, })
         break;
       }
       default: {
-        content = <span>{name}</span>;
+        content = (
+          <Container>
+            <Row xs={1} md={1} lg={2} xl={2}>
+              <Col>
+                <span>{name}</span>
+              </Col>
+              <Col>
+                <span><small>{lastUpdateTime.toLocaleDateString()}</small></span>
+              </Col>
+            </Row>
+          </Container>
+        );
+
         break;
       }
     }

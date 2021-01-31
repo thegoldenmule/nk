@@ -110,20 +110,20 @@ function App({
       return -1;
     }
 
-    return a.lastUpdatedAt - b.lastUpdatedAt;
+    return b.lastUpdatedAt - a.lastUpdatedAt;
   });
 
   const files = sortedKeys.map(k => {
     const status = noteStatuses[k];
-    const { isDirty } = draft.drafts[k] || {};
+    const { isDirty, lastUpdatedAt } = draft.drafts[k] || {};
 
     const n = noteValues[k];
     if (n) {
       const { title } = n;
-      return { key: k, name: `${title}${isDirty ? '*' : ''}`, status };
+      return { key: k, name: `${title}${isDirty ? '*' : ''}`, status, lastUpdatedAt };
     }
 
-    return { key: k, name: k, status };
+    return { key: k, name: k, status, lastUpdatedAt };
   });
 
   // run on first render
