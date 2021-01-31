@@ -14,7 +14,7 @@ import {
 import { getNoteStatuses, noteStatus } from './slices/nkSlice';
 
 const NoteEditor = ({ onSave, isSaving, draft: { key, drafts, newDraft }, dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody }) => {
-  const { title, body } = drafts[key] || {};
+  const { title, body, lastUpdatedAt, } = drafts[key] || {};
 
   const ref = useRef(null);
 
@@ -31,6 +31,9 @@ const NoteEditor = ({ onSave, isSaving, draft: { key, drafts, newDraft }, dispat
   if (!key) {
     return null;
   }
+
+  const lastUpdateTime = new Date();
+  lastUpdateTime.setTime(lastUpdatedAt);
 
   return (
     <div>
@@ -68,6 +71,7 @@ const NoteEditor = ({ onSave, isSaving, draft: { key, drafts, newDraft }, dispat
             </Button>
             <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faCopy} /></Button>
           </ButtonGroup>
+          <p className={'mb-0 mt-2'}><small>Last saved {lastUpdateTime.toLocaleString('en-US')}</small></p>
           <ButtonGroup>
             <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faHistory} /></Button>
             <Button variant={'outline-danger'}><FontAwesomeIcon icon={faTrash} /></Button>

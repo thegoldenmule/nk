@@ -1,4 +1,5 @@
 import { createSelector, createSlice } from '@reduxjs/toolkit';
+import { getNoteValues } from './nkSlice';
 
 const initialState = {
   drafts: {},
@@ -10,14 +11,14 @@ const draftSlice =  createSlice(
     name: 'draft',
     initialState,
     reducers: {
-      newDraft(state, { payload: { key, title, body } }) {
+      newDraft(state, { payload: { key, note } }) {
         const currentDraft = state.drafts[key];
         return {
           ...state,
           key,
           drafts: {
             ...state.drafts,
-            [key]: currentDraft || { title, body, isDirty: false }
+            [key]: currentDraft || { ...note, isDirty: false }
           },
           newDraft: true,
         };

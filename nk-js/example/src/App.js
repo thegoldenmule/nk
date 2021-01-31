@@ -182,9 +182,8 @@ export default connect(
       return res;
     },
     dispatchUpdateActiveKey: ({ key, note }) => {
-      const { title, body } = note;
       dispatch(updateActiveKey(key));
-      dispatch(newDraft({ key, title, body }));
+      dispatch(newDraft({ key, note }));
     },
   }),
 )(App);

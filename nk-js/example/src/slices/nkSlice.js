@@ -103,6 +103,14 @@ export const loadNote = createAsyncThunk(
 export const updateNote = createAsyncThunk(
   'nk/update-note',
   async ({ key, note }, { getState, rejectedWithValue }) => {
+    // get note out of local
+    const notes = getNoteValues(getState());
+    const existingNote = notes[key];
+
+    // update
+    note.createdAt = existingNote.createdAt || new Date().getTime();
+    note.lastUpdatedAt = new Date().getTime();
+
     const value = noteToValue(note);
     const context = getContext(getState());
     let newContext;
