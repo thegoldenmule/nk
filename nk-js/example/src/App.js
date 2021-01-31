@@ -97,7 +97,23 @@ function App({
     dispatchUpdateActiveKey({ key, note });
   };
 
-  const files = noteKeys.map(k => {
+  const sortedKeys = [...noteKeys];
+  sortedKeys.sort((i, j) => {
+    const a = noteValues[i];
+    const b = noteValues[j];
+
+    if (!a) {
+      return 1;
+    }
+
+    if (!b) {
+      return -1;
+    }
+
+    return a.lastUpdatedAt - b.lastUpdatedAt;
+  });
+
+  const files = sortedKeys.map(k => {
     const status = noteStatuses[k];
     const { isDirty } = draft.drafts[k] || {};
 
