@@ -1,26 +1,26 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Button, ButtonGroup, ButtonToolbar, Form, OverlayTrigger, Spinner, Tooltip } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faHistory, faSave, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { Editor } from '@toast-ui/react-editor';
-import { noteFromParametersFactory } from './notes';
 import { connect } from 'react-redux';
 import {
   getDraft,
-  getDraftBody,
   getDraftKey,
-  getDraftTitle, newDraftUpdatedInternal,
+  newDraftUpdatedInternal,
   updateBody,
   updateTitle
 } from './slices/draftSlice';
 import { getNoteStatuses, noteStatus } from './slices/nkSlice';
 
-const NoteEditor = ({ onSave, isSaving, draft: { key, title, body, newDraft }, dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody }) => {
+const NoteEditor = ({ onSave, isSaving, draft: { key, drafts, newDraft }, dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody }) => {
   const ref = useRef(null);
 
   if (!key) {
     return null;
   }
+
+  const { title, body } = drafts[key];
 
   if (newDraft) {
     if (ref.current) {

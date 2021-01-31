@@ -6,7 +6,7 @@ const arrayBufferToString = buf => {
 };
 
 const stringToArrayBuffer = str => {
-  const buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
+  const buf = new ArrayBuffer(str.length * 2); // 2 bytes for each char
   const bufView = new Uint16Array(buf);
   for (let i = 0, strLen = str.length; i < strLen; i++) {
     bufView[i] = str.charCodeAt(i);
@@ -15,7 +15,11 @@ const stringToArrayBuffer = str => {
   return buf;
 };
 
-const utils = { arrayBufferToString, stringToArrayBuffer };
+const splitBuffer = buffer => {
+  const view8 = new Uint8Array(buffer);
+  const view16 = new Uint16Array(buffer);
+  return [view8.subarray(0, 12), view16.subarray(6)];
+};
 
 const getKeyMaterial = password => crypto.subtle.importKey(
   "raw",
@@ -424,8 +428,6 @@ const getKeys = async (context) => {
 };
 
 const createData = async (context, keyName, value) => {
-  console.log('CREATE', value);
-
   if (value.length % 2 === 1) {
     value += ' ';
   }
@@ -461,12 +463,6 @@ const createData = async (context, keyName, value) => {
   return contextWithValue(context, keyName, value);
 };
 
-const splitBuffer = buffer => {
-  const view8 = new Uint8Array(buffer);
-  const view16 = new Uint16Array(buffer);
-  return [view8.subarray(0, 12), view16.subarray(6)];
-};
-
 const getData = async (context, keyName) => {
   // fetch
   let res;
@@ -498,14 +494,10 @@ const getData = async (context, keyName) => {
     throw new Error(`Could not decrypt data: ${error}.`);
   }
 
-  console.log('GET', plaintext)
-
   return contextWithValue(context, keyName, plaintext);
 };
 
 const updateData = async (context, keyName, value) => {
-  console.log('PUT', value);
-
   if (value.length % 2 === 1) {
     value += ' ';
   }
@@ -570,4 +562,5 @@ const updateData = async (context, keyName, value) => {
   return contextWithValue(context, keyName, value);
 };
 
+const utils = { arrayBufferToString, stringToArrayBuffer };
 export { utils, createContext, contextWithConfig, isLoggedIn, register, createData, updateData, getData, getKeys, serialize, deserialize };

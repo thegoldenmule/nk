@@ -59,6 +59,7 @@ const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, })
 
     listItems.push(
       <ListGroup.Item
+        action
         key={i}
         active={activeNote === key}
         onClick={() => onNoteSelected(key)}
@@ -74,7 +75,9 @@ const FileBrowser = ({  files = [], activeNote, onCreateNote, onNoteSelected, })
         <InputGroup>
           <FormControl type={'text'} placeholder={'Search'} size={'lg'} />
           <InputGroup.Append>
-            <Button variant={'outline-success'}><FontAwesomeIcon icon={faSearch} /></Button>
+            <Button variant={'outline-success'}>
+              <FontAwesomeIcon icon={faSearch} />
+            </Button>
           </InputGroup.Append>
         </InputGroup>
       </div>

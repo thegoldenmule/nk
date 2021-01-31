@@ -26,7 +26,7 @@ import {
 import { connect } from 'react-redux';
 import { getActiveKey, updateActiveKey } from './slices/workspaceSlice';
 import { unwrapResult } from '@reduxjs/toolkit';
-import { getDraft, newDraft } from './slices/draftSlice';
+import { draftSaved, getDraft, newDraft } from './slices/draftSlice';
 import { noteFromParametersFactory } from './notes';
 
 const getUnloadedKey = (noteStatuses) => {
@@ -99,11 +99,12 @@ function App({
 
   const files = noteKeys.map(k => {
     const status = noteStatuses[k];
+    const { isDirty } = draft.drafts[k] || {};
 
     const n = noteValues[k];
     if (n) {
       const { title } = n;
-      return { key: k, name: title, status };
+      return { key: k, name: `${title}${isDirty ? '*' : ''}`, status };
     }
 
     return { key: k, name: k, status };
@@ -175,7 +176,11 @@ export default connect(
     dispatchSignUp: () => dispatch(signUp()),
     dispatchNewNote: () => dispatch(newNote()),
     dispatchLoadNote: key => dispatch(loadNote(key)),
-    dispatchUpdateNote: ({ key, note }) => dispatch(updateNote({ key, note })),
+    dispatchUpdateNote: async ({ key, note }) => {
+      const res = await dispatch(updateNote({ key, note }));
+      dispatch(draftSaved(key))
+      return res;
+    },
     dispatchUpdateActiveKey: ({ key, note }) => {
       const { title, body } = note;
       dispatch(updateActiveKey(key));
