@@ -112,7 +112,7 @@ export const updateNote = createAsyncThunk(
       return rejectedWithValue({ key, error });
     }
 
-    return { key, context: newContext };
+    return { key, note, context: newContext };
   },
 );
 
@@ -256,7 +256,7 @@ const nkSlice = createSlice({
         },
       };
     },
-    [updateNote.fulfilled]: (state, { payload: { key, context } }) => {
+    [updateNote.fulfilled]: (state, { payload: { key, note, context } }) => {
       return {
         ...state,
         context,
@@ -264,6 +264,10 @@ const nkSlice = createSlice({
           ...state.noteStatuses,
           [key]: noteStatus.loaded,
         },
+        noteValues: {
+          ...state.noteValues,
+          [key]: note,
+        }
       };
     },
     [updateNote.rejected]: (state, { key, error }) => {
