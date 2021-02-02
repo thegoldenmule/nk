@@ -12,6 +12,7 @@ import {
   updateTitle
 } from './slices/draftSlice';
 import { getNoteStatuses, noteStatus } from './slices/nkSlice';
+import { getActiveKey } from './slices/workspaceSlice';
 
 const NoteEditor = ({
   onSave, onDuplicate, onDelete, isSaving,
@@ -125,7 +126,7 @@ const NoteEditor = ({
 export default connect(
   state => ({
     draft: getDraft(state),
-    isSaving: getNoteStatuses(state)[getDraftKey(state)] === noteStatus.loading,
+    isSaving: getNoteStatuses(state)[getActiveKey(state)] === noteStatus.saving,
   }),
   dispatch => ({
     dispatchUpdateTitle: title => dispatch(updateTitle(title)),

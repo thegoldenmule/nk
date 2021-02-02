@@ -18,7 +18,7 @@ import {
   getIsLoggedIn,
   newNote,
   getNoteKeys,
-  getNoteValues, loadNote, updateNote, getNoteStatuses, noteStatus, deleteNote
+  getNoteValues, loadNote, updateNote, getNoteStatuses, deleteNote, noteStatus
 } from './slices/nkSlice';
 import { connect } from 'react-redux';
 import { getActiveKey, loadAll, updateActiveKey } from './slices/workspaceSlice';
@@ -54,7 +54,7 @@ function App({
   activeKey, dispatchUpdateActiveKey,
   noteKeys, noteValues, noteStatuses,
   draft, query,
-  dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote, dispatchUpdateNote, dispatchDeleteNote,
+  dispatchNewNote, dispatchLoadNote, dispatchUpdateNote, dispatchDeleteNote,
 }) {
   // create a search index
   const fuseRef = useRef(new Fuse(
@@ -72,6 +72,7 @@ function App({
     fuseRef.current.setCollection(collection);
   }, [noteStatuses]);
 
+  // filter and sort keys
   let filteredKeys;
   if (query) {
     const results = fuseRef.current.search(query);
@@ -95,14 +96,6 @@ function App({
 
     return { key: k, name: k, status, lastUpdatedAt };
   });
-
-  const onLogout = async () => {
-    await dispatchLogout();
-  };
-
-  const onCreateUser = async () => {
-    await dispatchSignUp();
-  };
 
   const onCreateNote = async from => {
     const res = await dispatchNewNote(from);
