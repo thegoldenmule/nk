@@ -58,7 +58,7 @@ const ProfileView = ({ login, context, onCreateUser, dispatchLoginInit, dispatch
 
   return (
     <div>
-      <Modal show={phase === loginPhases.requestingCredentials}>
+      <Modal centered backdrop={'static'} show={phase === loginPhases.requestingCredentials}>
         <Modal.Header>
           <Modal.Title>Please enter your password.</Modal.Title>
         </Modal.Header>
@@ -79,7 +79,7 @@ const ProfileView = ({ login, context, onCreateUser, dispatchLoginInit, dispatch
           <Button variant={'primary'} onClick={() => dispatchSubmitPassword()}>Login</Button>
         </Modal.Footer>
       </Modal>
-      <Modal show={phase === loginPhases.decrypting}>
+      <Modal centered backdrop={'static'} show={phase === loginPhases.decrypting}>
         <Modal.Body>
           <Container>
             <Row>

@@ -29,6 +29,26 @@ import Fuse from 'fuse.js';
 import { getQuery } from './slices/filesSlice';
 import { getLogin } from './slices/loginSlice';
 
+export const getSortedKeys = (noteKeys, noteValues) => {
+  const filteredKeys = [...noteKeys];
+  filteredKeys.sort((i, j) => {
+    const a = noteValues[i];
+    const b = noteValues[j];
+
+    if (!a) {
+      return 1;
+    }
+
+    if (!b) {
+      return -1;
+    }
+
+    return b.lastUpdatedAt - a.lastUpdatedAt;
+  });
+
+  return filteredKeys;
+};
+
 function App({
   context, isLoggedIn,
   activeKey, dispatchUpdateActiveKey,
@@ -58,21 +78,7 @@ function App({
     filteredKeys = results.map(({ item: { key } }) => key);
   } else {
     // sort list of all keys by last update
-    filteredKeys = [...noteKeys];
-    filteredKeys.sort((i, j) => {
-      const a = noteValues[i];
-      const b = noteValues[j];
-
-      if (!a) {
-        return 1;
-      }
-
-      if (!b) {
-        return -1;
-      }
-
-      return b.lastUpdatedAt - a.lastUpdatedAt;
-    });
+    filteredKeys = getSortedKeys(noteKeys, noteValues);
   }
 
   // generate file entries from list

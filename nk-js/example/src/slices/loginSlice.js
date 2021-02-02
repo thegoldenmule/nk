@@ -3,6 +3,7 @@ import { createContext, deserialize, getKeys } from '../nk-js';
 import { getContext, getNoteValues, initializeContext, loadNote } from './nkSlice';
 import { updateActiveKey } from './workspaceSlice';
 import { newDraft } from './draftSlice';
+import { getSortedKeys } from '../App';
 
 export const loginPhases = {
   uninitialized: 'uninitialized',
@@ -64,7 +65,8 @@ export const loadAll = createAsyncThunk(
     }
 
     const notes = getNoteValues(getState());
-    const [first, ..._] = keyNames;
+    const sortedKeys = getSortedKeys(keyNames, notes);
+    const [first, ..._] = sortedKeys;
     if (first) {
       dispatch(updateActiveKey(first));
       dispatch(newDraft({ key: first, note: notes[first] }));
