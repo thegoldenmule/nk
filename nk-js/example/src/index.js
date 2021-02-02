@@ -10,6 +10,7 @@ import nkReducer from './slices/nkSlice';
 import workspaceReducer from './slices/workspaceSlice';
 import draftReducer from './slices/draftSlice';
 import filesReducer from './slices/filesSlice';
+import loginReducer from './slices/loginSlice';
 
 import { Provider } from 'react-redux';
 import thunk from 'redux-thunk';
@@ -21,6 +22,7 @@ const store = configureStore({
     workspace: workspaceReducer,
     draft: draftReducer,
     files: filesReducer,
+    login: loginReducer,
   },
   middleware: [thunk, logger],
 });

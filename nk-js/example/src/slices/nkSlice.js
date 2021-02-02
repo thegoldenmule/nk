@@ -35,21 +35,6 @@ const newKey = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c =
   return v.toString(16);
 });
 
-export const login = createAsyncThunk(
-  'nk/loadContext',
-  async () => {
-    const contextData = localStorage.getItem('_context');
-    if (contextData) {
-      let context = await deserialize(contextData, '111111');
-      context = await getKeys(context);
-
-      return context;
-    }
-
-    return createContext();
-  },
-);
-
 export const signUp = createAsyncThunk(
   'nk/signUp',
   async (_, { getState }) => {
@@ -183,6 +168,16 @@ const nkSlice = createSlice({
   name: 'nk',
   initialState,
   reducers: {
+    initializeContext(state, { payload: context }) {
+      return {
+        ...state,
+        context,
+        isLoggedIn: isLoggedIn(context),
+        noteKeys: context.keyNames,
+        notes: parseContextNodes(context.plaintextValues),
+        noteStatuses: Object.fromEntries(context.keyNames.map(n => [n, context.plaintextValues[n] ? noteStatus.loaded : noteStatus.unloaded])),
+      };
+    },
     logout(state) {
       return {
         ...state,
@@ -192,18 +187,6 @@ const nkSlice = createSlice({
     },
   },
   extraReducers: {
-    [login.fulfilled]: (state, action) => ({
-      ...state,
-      isLoggedIn: isLoggedIn(action.payload),
-      context: action.payload,
-      noteKeys: action.payload.keyNames,
-      notes: parseContextNodes(action.payload.plaintextValues),
-      noteStatuses: Object.fromEntries(action.payload.keyNames.map(n => [n, action.payload.plaintextValues[n] ? noteStatus.loaded : noteStatus.unloaded])),
-    }),
-    [login.rejected]: (state, action) => ({
-      // todo: add error
-      ...state,
-    }),
     [signUp.fulfilled]: (state, action) => ({
       ...state,
       isLoggedIn: true,
@@ -342,5 +325,5 @@ export const getNoteKeys = createSelector(getNk, ({ noteKeys }) => noteKeys);
 export const getNoteValues = createSelector(getNk, ({ noteValues }) => noteValues);
 export const getNoteStatuses = createSelector(getNk, ({ noteStatuses }) => noteStatuses);
 
-export const { logout } = nkSlice.actions;
+export const { initializeContext, logout, } = nkSlice.actions;
 export default nkSlice.reducer;

@@ -16,9 +16,6 @@ import NoteEditor from './editor';
 import {
   getContext,
   getIsLoggedIn,
-  login,
-  logout,
-  signUp,
   newNote,
   getNoteKeys,
   getNoteValues, loadNote, updateNote, getNoteStatuses, noteStatus, deleteNote
@@ -30,13 +27,14 @@ import { draftSaved, getDraft, newDraft } from './slices/draftSlice';
 import { noteFromParametersFactory, noteToValue, valueToNote } from './notes';
 import Fuse from 'fuse.js';
 import { getQuery } from './slices/filesSlice';
+import { getLogin } from './slices/loginSlice';
 
 function App({
   context, isLoggedIn,
   activeKey, dispatchUpdateActiveKey,
   noteKeys, noteValues, noteStatuses,
   draft, query,
-  dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote, dispatchUpdateNote, dispatchDeleteNote,
+  dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote, dispatchUpdateNote, dispatchDeleteNote,
 }) {
   // create a search index
   const fuseRef = useRef(new Fuse(
@@ -91,10 +89,6 @@ function App({
 
     return { key: k, name: k, status, lastUpdatedAt };
   });
-
-  const onLogin = async () => {
-    await dispatchLogin();
-  };
 
   const onLogout = async () => {
     await dispatchLogout();
@@ -167,16 +161,10 @@ function App({
     dispatchUpdateActiveKey({ key, note });
   };
 
-  // run on first render
-  useEffect(() => onLogin(), []);
-
   return (
     <Container className={'h-100 mh-100'}>
       <ProfileView
         context={context}
-        onLogin={onLogin}
-        onLogout={onLogout}
-        onCreateUser={onCreateUser}
       />
 
       {
@@ -214,6 +202,7 @@ function App({
 
 export default connect(
   state => ({
+    login: getLogin(state),
     context: getContext(state),
     isLoggedIn: getIsLoggedIn(state),
     activeKey: getActiveKey(state),
@@ -224,20 +213,6 @@ export default connect(
     query: getQuery(state),
   }),
   dispatch => ({
-    dispatchLogin: async () => {
-      const res = await dispatch(login());
-
-      let ctx;
-      try {
-        ctx = await unwrapResult(res);
-      } catch (error) {
-        return;
-      }
-
-      await dispatch(loadAll(ctx.keyNames));
-    },
-    dispatchLogout: () => dispatch(logout()),
-    dispatchSignUp: () => dispatch(signUp()),
     dispatchNewNote: from => dispatch(newNote({ from })),
     dispatchLoadNote: key => dispatch(loadNote(key)),
     dispatchUpdateNote: async ({ key, note }) => {
