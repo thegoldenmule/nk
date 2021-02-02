@@ -5,7 +5,7 @@ import {
   Container,
   Row
 } from 'react-bootstrap';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import 'codemirror/lib/codemirror.css';
 import '@toast-ui/editor/dist/toastui-editor.css';
@@ -27,31 +27,69 @@ import { connect } from 'react-redux';
 import { getActiveKey, loadAll, updateActiveKey } from './slices/workspaceSlice';
 import { unwrapResult } from '@reduxjs/toolkit';
 import { draftSaved, getDraft, newDraft } from './slices/draftSlice';
-import { noteFromParametersFactory } from './notes';
-import { getKeys } from './nk-js';
+import { noteFromParametersFactory, noteToValue, valueToNote } from './notes';
+import Fuse from 'fuse.js';
+import { getQuery } from './slices/filesSlice';
 
 function App({
   context, isLoggedIn,
   activeKey, dispatchUpdateActiveKey,
   noteKeys, noteValues, noteStatuses,
-  draft,
+  draft, query,
   dispatchLogin, dispatchLogout, dispatchSignUp, dispatchNewNote, dispatchLoadNote, dispatchUpdateNote, dispatchDeleteNote,
 }) {
-  // sort list of keys by last update
-  const sortedKeys = [...noteKeys];
-  sortedKeys.sort((i, j) => {
-    const a = noteValues[i];
-    const b = noteValues[j];
+  // create a search index
+  const fuseRef = useRef(new Fuse(
+    [],
+    {
+      includeScore: true,
+      ignoreLocation: true,
+      shouldSort: true,
+      keys: ['title', 'body',],
+    }));
 
-    if (!a) {
-      return 1;
+  // update index when note statuses change
+  useEffect(() => {
+    const collection = noteKeys.map(key => ({ key, ...(noteValues[key] || {}) }));
+    fuseRef.current.setCollection(collection);
+  }, [noteStatuses]);
+
+  let filteredKeys;
+  if (query) {
+    const results = fuseRef.current.search(query);
+    filteredKeys = results.map(({ item: { key } }) => key);
+  } else {
+    // sort list of all keys by last update
+    filteredKeys = [...noteKeys];
+    filteredKeys.sort((i, j) => {
+      const a = noteValues[i];
+      const b = noteValues[j];
+
+      if (!a) {
+        return 1;
+      }
+
+      if (!b) {
+        return -1;
+      }
+
+      return b.lastUpdatedAt - a.lastUpdatedAt;
+    });
+  }
+
+  // generate file entries from list
+  const files = filteredKeys.map(k => {
+    const status = noteStatuses[k];
+    const { isDirty } = draft.drafts[k] || {};
+    const { lastUpdatedAt } = noteValues[k] || {};
+
+    const n = noteValues[k];
+    if (n) {
+      const { title } = n;
+      return { key: k, name: `${title}${isDirty ? '*' : ''}`, status, lastUpdatedAt };
     }
 
-    if (!b) {
-      return -1;
-    }
-
-    return b.lastUpdatedAt - a.lastUpdatedAt;
+    return { key: k, name: k, status, lastUpdatedAt };
   });
 
   const onLogin = async () => {
@@ -66,8 +104,8 @@ function App({
     await dispatchSignUp();
   };
 
-  const onCreateNote = async () => {
-    const res = await dispatchNewNote();
+  const onCreateNote = async from => {
+    const res = await dispatchNewNote(from);
 
     let payload;
     try {
@@ -90,12 +128,19 @@ function App({
     });
   };
 
+  const onDuplicate = async key => {
+    const source = valueToNote(noteToValue(noteValues[key]));
+    source.title += ' (Copy)';
+
+    return await onCreateNote(source);
+  };
+
   const onDelete = async () => {
     await dispatchDeleteNote(activeKey);
 
     // select next note
-    for (let i = 0, len = sortedKeys.length; i < len; i++) {
-      const k = sortedKeys[i];
+    for (let i = 0, len = filteredKeys.length; i < len; i++) {
+      const k = filteredKeys[i];
       if (k !== activeKey) {
         return await dispatchUpdateActiveKey({
           key: k,
@@ -122,20 +167,6 @@ function App({
     dispatchUpdateActiveKey({ key, note });
   };
 
-  const files = sortedKeys.map(k => {
-    const status = noteStatuses[k];
-    const { isDirty } = draft.drafts[k] || {};
-    const { lastUpdatedAt } = noteValues[k] || {};
-
-    const n = noteValues[k];
-    if (n) {
-      const { title } = n;
-      return { key: k, name: `${title}${isDirty ? '*' : ''}`, status, lastUpdatedAt };
-    }
-
-    return { key: k, name: k, status, lastUpdatedAt };
-  });
-
   // run on first render
   useEffect(() => onLogin(), []);
 
@@ -161,7 +192,7 @@ function App({
             </Col>
 
             <Col className={'p-2 h-100'}>
-              <NoteEditor onSave={onSave} onDelete={onDelete} />
+              <NoteEditor onSave={onSave} onDuplicate={onDuplicate} onDelete={onDelete} />
             </Col>
           </Row>
         )
@@ -190,6 +221,7 @@ export default connect(
     noteValues: getNoteValues(state),
     noteStatuses: getNoteStatuses(state),
     draft: getDraft(state),
+    query: getQuery(state),
   }),
   dispatch => ({
     dispatchLogin: async () => {
@@ -206,11 +238,21 @@ export default connect(
     },
     dispatchLogout: () => dispatch(logout()),
     dispatchSignUp: () => dispatch(signUp()),
-    dispatchNewNote: () => dispatch(newNote()),
+    dispatchNewNote: from => dispatch(newNote({ from })),
     dispatchLoadNote: key => dispatch(loadNote(key)),
     dispatchUpdateNote: async ({ key, note }) => {
       const res = await dispatch(updateNote({ key, note }));
-      dispatch(draftSaved(key))
+
+      let value;
+      try {
+        value = await unwrapResult(res);
+      } catch (error) {
+        return res;
+      }
+
+      const { note: updatedNote } = value;
+      dispatch(draftSaved({ note: updatedNote, key }));
+
       return res;
     },
     dispatchDeleteNote: async (key) => {

@@ -12,10 +12,9 @@ import {
   updateTitle
 } from './slices/draftSlice';
 import { getNoteStatuses, noteStatus } from './slices/nkSlice';
-import { BugIcon } from '@primer/octicons-react';
 
 const NoteEditor = ({
-  onSave, onDelete, isSaving,
+  onSave, onDuplicate, onDelete, isSaving,
   draft: { key, drafts, newDraft },
   dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody }) => {
 
@@ -50,7 +49,7 @@ const NoteEditor = ({
         </Modal.Body>
         <Modal.Footer>
           <Button variant={'secondary'} onClick={() => setShowDelete(false)}>Close</Button>
-          <Button variant={'primary'} onClick={async () => {
+          <Button variant={'danger'} onClick={async () => {
             await onDelete(key);
 
             setShowDelete(false);
@@ -88,13 +87,12 @@ const NoteEditor = ({
                   : <FontAwesomeIcon icon={faSave} />
               }
             </Button>
-            <Button variant={'outline-secondary'}><FontAwesomeIcon icon={faCopy} /></Button>
+            <Button variant={'outline-secondary'} onClick={() => onDuplicate(key)}>
+              <FontAwesomeIcon icon={faCopy} />
+            </Button>
           </ButtonGroup>
           <p className={'mb-0 mt-2'}><small>Last saved {lastUpdateTime.toLocaleString('en-US')}</small></p>
           <ButtonGroup>
-            <Button
-              variant={'outline-secondary'}
-            ><FontAwesomeIcon icon={faHistory} /></Button>
             <Button
               variant={'outline-danger'}
               onClick={() => setShowDelete(true)}

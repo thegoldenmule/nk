@@ -68,10 +68,10 @@ export const signUp = createAsyncThunk(
 
 export const newNote = createAsyncThunk(
   'nk/new-note',
-  async (_, { getState, rejectWithValue }) => {
+  async ({ from }, { getState, rejectWithValue }) => {
     const context = getContext(getState());
     const key = newKey();
-    const note = noteFactory();
+    const note = from || noteFactory();
 
     let newContext;
     try {

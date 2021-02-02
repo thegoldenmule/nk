@@ -59,13 +59,14 @@ const draftSlice =  createSlice(
         };
       },
 
-      draftSaved(state, { payload: key }) {
+      draftSaved(state, { payload: { key, note } }) {
         return {
           ...state,
           drafts: {
             ...state.drafts,
             [key]: {
               ...state.drafts[key],
+              lastUpdatedAt: note.lastUpdatedAt,
               isDirty: false,
             },
           },
