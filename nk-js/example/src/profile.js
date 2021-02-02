@@ -1,4 +1,4 @@
-import { Button, Form, Modal, Nav, Navbar, Spinner } from 'react-bootstrap';
+import { Alert, Button, Col, Container, Form, Modal, Nav, Navbar, Row, Spinner } from 'react-bootstrap';
 import { connect } from 'react-redux';
 import { getContext, logout, signUp } from './slices/nkSlice';
 import { getLogin, init, loginPhases, submitPassword, updatePassword } from './slices/loginSlice';
@@ -71,11 +71,31 @@ const ProfileView = ({ login, context, onCreateUser, dispatchLoginInit, dispatch
             value={value}
             onChange={evt => dispatchUpdatePassword(evt.target.value)}
           />
+          {
+            error && <div className={'pt-4'}><Alert variant={'danger'}>{error}</Alert></div>
+          }
         </Modal.Body>
         <Modal.Footer>
-          <Button variant={'secondary'} onClick={() => dispatchLogout()}>Cancel</Button>
           <Button variant={'primary'} onClick={() => dispatchSubmitPassword()}>Login</Button>
         </Modal.Footer>
+      </Modal>
+      <Modal show={phase === loginPhases.decrypting}>
+        <Modal.Body>
+          <Container>
+            <Row>
+              <Col>
+                <p className={'text-center lead'}>Decrypting...</p>
+              </Col>
+            </Row>
+            <Row>
+              <Col></Col>
+              <Col md={'auto'}>
+                <img src={'./infinity.gif'} />
+              </Col>
+              <Col></Col>
+            </Row>
+          </Container>
+        </Modal.Body>
       </Modal>
       <Navbar bg={'light'} expand={'lg'}>
         <Navbar.Brand>

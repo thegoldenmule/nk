@@ -30,32 +30,29 @@ const initialState = {
 
 export const submitPassword = createAsyncThunk(
   'login/submit',
-  async (_, { getState, dispatch, }) => {
+  async (_, { getState, dispatch, rejectWithValue, }) => {
     const { value, contextData } = getLogin(getState());
+
+    const { decrypt } = loginSlice.actions;
+    dispatch(decrypt());
 
     let context;
     try {
       context = await deserialize(contextData, value);
     } catch (error) {
-      return {
-        phase: loginPhases.requestingCredentials,
-        error,
-      };
+      return rejectWithValue('Invalid password.');
     }
 
     try {
       context = await getKeys(context);
     } catch (error) {
-      return {
-        phase: loginPhases.completeLoggedIn,
-        error,
-      };
+      return;
     }
 
     dispatch(initializeContext(context));
     await dispatch(loadAll());
 
-    return { context };
+    return;
   });
 
 export const loadAll = createAsyncThunk(
@@ -98,10 +95,18 @@ const loginSlice = createSlice({
         error: '',
       };
     },
+    decrypt: (state) => ({
+      ...state,
+      phase: loginPhases.decrypting,
+    }),
     updatePassword: (state, { payload }) => ({ ...state, value: payload, }),
   },
 
   extraReducers: {
+    [submitPassword.rejected]: (state, { payload: error }) => ({
+      ...state,
+      error,
+    }),
     [submitPassword.fulfilled]: () => ({
       phase: loginPhases.completeLoggedIn,
     }),

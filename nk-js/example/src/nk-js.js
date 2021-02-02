@@ -161,13 +161,13 @@ const deserialize = async (data, password) => {
   try {
     context.keys.signing.privateKey = await deserializePrivateKey(privateKey, password);
   } catch (error) {
-    console.error(`Could not create private key: ${error}.`);
+    throw new Error('Could not create private key.');
   }
 
   try {
     context.keys.encryption = await deserializeEncryptionKey(encryption, password);
   } catch (error) {
-    console.log('Could not create encryption key.', error)
+    throw new Error('Could not create symmetric encryption key.');
   }
 
   return context;
