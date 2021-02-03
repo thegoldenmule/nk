@@ -1,64 +1,83 @@
 import { Alert, Button, Col, Container, Form, Modal, Nav, Navbar, Row, Spinner } from 'react-bootstrap';
 import { connect } from 'react-redux';
-import { getContext, logout, signUp } from './slices/nkSlice';
-import { getLogin, init, loginPhases, submitPassword, updatePassword } from './slices/loginSlice';
+import { getContext, getIsLoggedIn, } from './slices/nkSlice';
+import {
+  getLogin, initLogin,
+  loginPhases,
+  submitPasswordLogin,
+  updatePasswordLogin
+} from './slices/loginSlice';
 import { useEffect, useRef } from 'react';
+import {
+  getRegister,
+  initRegister,
+  registrationPhases,
+  submitPasswordRegister, updatePasswordConfirmationRegister,
+  updatePasswordRegister
+} from './slices/registerSlice';
 
-const ProfileView = ({ login, context, onCreateUser, dispatchLoginInit, dispatchUpdatePassword, dispatchSubmitPassword, dispatchLogout, dispatchSignup }) => {
+const ProfileView = ({
+  isLoggedIn, login, register,
+  dispatchLoginInit, dispatchUpdateLoginPassword, dispatchSubmitLoginPassword,
+  dispatchRegisterInit, dispatchUpdateRegisterPassword, dispatchUpdateRegisterPasswordConfirmation, dispatchSubmitRegisterPassword,
+  dispatchLogout, }) => {
 
-  const { phase, value, error, contextData, context: loginContext } = login;
+  const { phase: loginPhase, value: loginValue, error: loginError, } = login;
+  const { phase: registerPhase, value: registerValue, valueConfirmation, error: registerError, } = register;
 
   const renderPhase = () => {
-    switch (phase) {
-      case loginPhases.completeAnonymous:
-      case loginPhases.uninitialized: {
-        return (
-          <Nav>
-            <Button
-              className={'mr-sm-2'}
-              onClick={() => dispatchSignup()}
-            >
-            </Button>
-            <Button
-              variant={'outline'}
-              onClick={() => dispatchLoginInit()}
-            >Login</Button>
-          </Nav>
-        );
-      }
-      case loginPhases.requestingCredentials: {
-        return (
-          <></>
-        );
-      }
-      case loginPhases.decrypting: {
-        return (
-          <Nav>
-            <Spinner animation={'border'} size={'sm'} role={'status'} />
-          </Nav>
-        );
-      }
-      case loginPhases.completeLoggedIn: {
-        return (
-          <Nav>
-            <Navbar.Text>Signed in.&nbsp;&nbsp;</Navbar.Text>
-            <Button
-              variant={'outline-secondary'}
-              onClick={() => dispatchLogout()}
-            >Logout</Button>
-          </Nav>
-        );
-      }
+    if (isLoggedIn) {
+      return (
+        <Nav>
+          <Navbar.Text>Signed in.&nbsp;&nbsp;</Navbar.Text>
+          <Button
+            variant={'outline-secondary'}
+            onClick={() => dispatchLogout()}
+          >Logout</Button>
+        </Nav>
+      );
     }
-  }
+
+    if (loginPhase === loginPhases.decrypting || registerPhase === registrationPhases.registering) {
+      return (
+        <Nav>
+          <Spinner animation={'border'} size={'sm'} role={'status'} />
+        </Nav>
+      );
+    }
+
+    if (loginPhase === loginPhases.completeAnonymous || loginPhase === loginPhases.uninitialized) {
+      return (
+        <Nav>
+          <Button
+            className={'mr-sm-2'}
+            onClick={() => dispatchRegisterInit()}
+          >
+            Register
+          </Button>
+        </Nav>
+      );
+    }
+
+    if (loginPhase === loginPhases.requestingCredentials || registerPhase === registrationPhases.requestingCredentials) {
+      return (
+        <></>
+      );
+    }
+  };
 
   useEffect(() => dispatchLoginInit(), []);
   const passwordRef = useRef(null);
   useEffect(() => passwordRef.current && passwordRef.current.focus());
 
+  const isValidRegisterPassword = registerValue
+    && valueConfirmation
+    && registerValue === valueConfirmation
+    && registerValue.length >= 8;
+
   return (
     <div>
-      <Modal centered backdrop={'static'} show={phase === loginPhases.requestingCredentials}>
+      <Modal centered backdrop={'static'} show={loginPhase === loginPhases.requestingCredentials}>
         <Modal.Header>
           <Modal.Title>Please enter your password.</Modal.Title>
         </Modal.Header>
@@ -68,23 +87,55 @@ const ProfileView = ({ login, context, onCreateUser, dispatchLoginInit, dispatch
             size={'sm'}
             type={'password'}
             placeholder={'Password'}
-            value={value}
-            onChange={evt => dispatchUpdatePassword(evt.target.value)}
+            value={loginValue}
+            onChange={evt => dispatchUpdateLoginPassword(evt.target.value)}
           />
           {
-            error && <div className={'pt-4'}><Alert variant={'danger'}>{error}</Alert></div>
+            loginError && <div className={'pt-4'}><Alert variant={'danger'}>{loginError}</Alert></div>
           }
         </Modal.Body>
         <Modal.Footer>
-          <Button variant={'primary'} onClick={() => dispatchSubmitPassword()}>Login</Button>
+          <Button variant={'primary'} onClick={() => dispatchSubmitLoginPassword()}>Login</Button>
         </Modal.Footer>
       </Modal>
-      <Modal centered backdrop={'static'} show={phase === loginPhases.decrypting}>
+      <Modal centered backdrop={'static'} show={registerPhase === registrationPhases.requestingCredentials}>
+        <Modal.Header>
+          <Modal.Title>Please enter a secure password.</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Control
+            size={'sm'}
+            type={'password'}
+            placeholder={'Password'}
+            value={registerValue}
+            onChange={evt => dispatchUpdateRegisterPassword(evt.target.value)}
+          />
+          <div className={'p-2'} />
+          <Form.Control
+            size={'sm'}
+            type={'password'}
+            placeholder={'Re-enter Password'}
+            value={valueConfirmation}
+            onChange={evt => dispatchUpdateRegisterPasswordConfirmation(evt.target.value)}
+          />
+          {
+            registerError && <div className={'pt-4'}><Alert variant={'danger'}>{registerError}</Alert></div>
+          }
+        </Modal.Body>
+        <Modal.Footer>
+          <Button disabled={!isValidRegisterPassword} variant={'primary'} onClick={() => dispatchSubmitRegisterPassword()}>Register</Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal centered backdrop={'static'} show={loginPhase === loginPhases.decrypting || registerPhase === registrationPhases.registering}>
         <Modal.Body>
           <Container>
             <Row>
               <Col>
-                <p className={'text-center lead'}>Decrypting...</p>
+                {
+                  loginPhase === loginPhase.decrypting
+                    ? (<p className={'text-center lead'}>Decrypting...</p>)
+                    : (<p className={'text-center lead'}>Generating Keys...</p>)
+                }
               </Col>
             </Row>
             <Row>
@@ -119,12 +170,16 @@ const ProfileView = ({ login, context, onCreateUser, dispatchLoginInit, dispatch
 export default connect(
   state => ({
     login: getLogin(state),
+    register: getRegister(state),
     context: getContext(state),
+    isLoggedIn: getIsLoggedIn(state),
   }),
   dispatch => ({
-    dispatchLoginInit: () => dispatch(init()),
-    dispatchUpdatePassword: value => dispatch(updatePassword(value)),
-    dispatchSubmitPassword: () => dispatch(submitPassword()),
-    dispatchLogout: () => dispatch(logout()),
-    dispatchSignUp: () => dispatch(signUp()),
+    dispatchLoginInit: () => dispatch(initLogin()),
+    dispatchUpdateLoginPassword: value => dispatch(updatePasswordLogin(value)),
+    dispatchSubmitLoginPassword: () => dispatch(submitPasswordLogin()),
+    dispatchRegisterInit: () => dispatch(initRegister()),
+    dispatchUpdateRegisterPassword: value => dispatch(updatePasswordRegister(value)),
+    dispatchUpdateRegisterPasswordConfirmation: value => dispatch(updatePasswordConfirmationRegister(value)),
+    dispatchSubmitRegisterPassword: () => dispatch(submitPasswordRegister()),
   }))(ProfileView);

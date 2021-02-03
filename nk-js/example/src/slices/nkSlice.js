@@ -35,19 +35,14 @@ const newKey = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c =
   return v.toString(16);
 });
 
-export const signUp = createAsyncThunk(
-  'nk/signUp',
-  async (_, { getState }) => {
+export const saveContext = createAsyncThunk(
+  'nk/saveContext',
+  async (password, { getState }) => {
     const context = getContext(getState());
-    const newContext = await register(context);
-
-    // TODO: ask for passphrase
-    const serialized = await serialize(newContext, '111111');
+    const serialized = await serialize(context, password);
 
     // save!
     localStorage.setItem('_context', serialized);
-
-    return newContext;
   },
 );
 
@@ -158,7 +153,7 @@ export const echo = createAsyncThunk(
 
     console.log('SUCCEEDED');
   }
-)
+);
 
 const parseContextNodes = (plaintextValues) => Object.fromEntries(
   Object.entries(plaintextValues).map(
@@ -187,15 +182,6 @@ const nkSlice = createSlice({
     },
   },
   extraReducers: {
-    [signUp.fulfilled]: (state, action) => ({
-      ...state,
-      isLoggedIn: true,
-      context: action.payload,
-    }),
-    [signUp.rejected]: (state, action) => ({
-      // todo: add error
-      ...state,
-    }),
     [newNote.pending]: (state, action) => {
       const { meta: { arg } } = action;
 

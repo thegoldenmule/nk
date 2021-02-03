@@ -13,14 +13,6 @@ export const loginPhases = {
   completeAnonymous: 'completeAnon',
 };
 
-// uninit
-//  init -> requestCredentials
-//    updatePassword
-//    submitPassword -> decrypting
-//      failed -> requestCredentials
-//      complete
-//  init -> complete
-
 const initialState = {
   phase: loginPhases.uninitialized,
   value: '',
@@ -29,7 +21,7 @@ const initialState = {
   context: null,
 };
 
-export const submitPassword = createAsyncThunk(
+export const submitPasswordLogin = createAsyncThunk(
   'login/submit',
   async (_, { getState, dispatch, rejectWithValue, }) => {
     const { value, contextData } = getLogin(getState());
@@ -78,7 +70,7 @@ const loginSlice = createSlice({
   name: 'login',
   initialState,
   reducers: {
-    init: (state, action) => {
+    initLogin: (state, action) => {
       const contextData = localStorage.getItem('_context');
       if (!contextData) {
         return {
@@ -101,15 +93,16 @@ const loginSlice = createSlice({
       ...state,
       phase: loginPhases.decrypting,
     }),
-    updatePassword: (state, { payload }) => ({ ...state, value: payload, }),
+    updatePasswordLogin: (state, { payload }) => ({ ...state, value: payload, }),
   },
 
   extraReducers: {
-    [submitPassword.rejected]: (state, { payload: error }) => ({
+    [submitPasswordLogin.rejected]: (state, { payload: error }) => ({
       ...state,
+      phase: loginPhases.requestingCredentials,
       error,
     }),
-    [submitPassword.fulfilled]: () => ({
+    [submitPasswordLogin.fulfilled]: () => ({
       phase: loginPhases.completeLoggedIn,
     }),
   },
@@ -118,5 +111,5 @@ const loginSlice = createSlice({
 export const getLogin = ({ login }) => login;
 export const getPassword = ({ value }) => value;
 
-export const { init, updatePassword } = loginSlice.actions;
+export const { initLogin, updatePasswordLogin } = loginSlice.actions;
 export default loginSlice.reducer;
