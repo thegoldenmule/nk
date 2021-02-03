@@ -154,7 +154,7 @@ const ProfileView = ({
             alt={'Logo'}
             width={'44'}
             style={{ marginRight: '20px '}}
-            src={'/logo.png'}
+            src={'logo.png'}
           />
           Nk Notes
         </Navbar.Brand>
