@@ -47,7 +47,7 @@ namespace TheGoldenMule.Nk.Controllers
             var sig = signatures[0];
 
             // context
-            await using var db = new zkContext();
+            await using var db = new NkContext();
             
             // find user
             User user;
@@ -109,7 +109,7 @@ namespace TheGoldenMule.Nk.Controllers
             _logger.LogInformation("Received request to create data.", new { userId });
             
             // context
-            await using var db = new zkContext();
+            await using var db = new NkContext();
             
             User user;
             try
@@ -197,7 +197,7 @@ namespace TheGoldenMule.Nk.Controllers
             _logger.LogInformation("Received request to update data.", new { userId });
             
             // context
-            await using var db = new zkContext();
+            await using var db = new NkContext();
             
             User user;
             try
@@ -267,7 +267,7 @@ namespace TheGoldenMule.Nk.Controllers
             }
 
             // read all keys
-            await using var db = new zkContext();
+            await using var db = new NkContext();
             var data = await db.Data.Where(d => d.UserId == userId).ToListAsync();
 
             return new GetKeysResponse
@@ -292,7 +292,7 @@ namespace TheGoldenMule.Nk.Controllers
             }
 
             // now look up the data
-            await using var db = new zkContext();
+            await using var db = new NkContext();
             var data = await db.Data.SingleAsync(d => d.UserId == userId && d.Key == key);
 
             await Response.Body.WriteAsync(StringToBytes(data.Iv));
@@ -319,7 +319,7 @@ namespace TheGoldenMule.Nk.Controllers
                 };
             }
 
-            await using var db = new zkContext();
+            await using var db = new NkContext();
 
             var datum = await db.Data.FirstOrDefaultAsync(d => d.Key == key && d.UserId == userId);
             if (datum == null)

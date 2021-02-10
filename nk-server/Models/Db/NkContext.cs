@@ -1,17 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 #nullable disable
 
 namespace TheGoldenMule.Nk.Models.Db
 {
-    public partial class zkContext : DbContext
+    public partial class NkContext : DbContext
     {
-        public zkContext()
+        public NkContext()
         {
         }
 
-        public zkContext(DbContextOptions<zkContext> options)
+        public NkContext(DbContextOptions<NkContext> options)
             : base(options)
         {
         }

@@ -24,7 +24,7 @@ namespace TheGoldenMule.Nk.Controllers
         public async Task<ProofResponse> Create(string userId)
         {
             // look up user
-            await using var db = new zkContext();
+            await using var db = new NkContext();
             var user = await db.Users.FindAsync(userId);
             if (user == null)
             {

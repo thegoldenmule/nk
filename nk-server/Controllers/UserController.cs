@@ -40,7 +40,7 @@ namespace TheGoldenMule.Nk.Controllers
                 
                 var id = GenerateUserId();
 
-                await using var db = new zkContext();
+                await using var db = new NkContext();
                 await db.Users.AddAsync(new User
                 {
                     Id = id,
