@@ -12,28 +12,53 @@ using TheGoldenMule.Nk.Services;
 
 namespace TheGoldenMule.Nk.Controllers
 {
+    /// <summary>
+    /// Provides endpoints for working with key/value data pairs.
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
     public class DataController : ControllerBase
     {
+        /// <summary>
+        /// Logging implementation.
+        /// </summary>
         private readonly ILogger<DataController> _logger;
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public DataController(ILogger<DataController> logger)
         {
             _logger = logger;
         }
 
+        /// <summary>
+        /// Converts bytes to string.
+        /// </summary>
+        /// <param name="bytes">The bytes to convert.</param>
+        /// <returns></returns>
         private static string BytesToString(ref byte[] bytes)
         {
             return BitConverter.ToString(bytes);
         }
 
+        /// <summary>
+        /// Converts a string back into bytes.
+        /// </summary>
+        /// <param name="str">The string to convert into bytes.</param>
+        /// <returns></returns>
         private static byte[] StringToBytes(string str)
         {
             var spl = str.Split('-');
             return spl.Select(s => Convert.ToByte(s, 16)).ToArray();
         }
         
+        /// <summary>
+        /// Checks a signature for a userId based on header information.
+        /// </summary>
+        /// <param name="userId">The user id.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception">Throws when signature is invalid.</exception>
         private async Task CheckSignature(string userId)
         {
             // read proof and signature from header
@@ -81,6 +106,11 @@ namespace TheGoldenMule.Nk.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves bytes from an <c>IFormFile</c>.
+        /// </summary>
+        /// <param name="file">The file.</param>
+        /// <returns></returns>
         private static async Task<byte[]> GetBytes(IFormFile file)
         {
             await using var stream = new MemoryStream();
@@ -88,6 +118,9 @@ namespace TheGoldenMule.Nk.Controllers
             return stream.ToArray();
         }
 
+        /// <summary>
+        /// Parses a request body into iv, sig, payload tuple.
+        /// </summary>
         private async Task<Tuple<byte[], byte[], byte[]>> ParseBody()
         {
             var iv = Request.Form.Files["Iv"];
@@ -102,6 +135,10 @@ namespace TheGoldenMule.Nk.Controllers
             return Tuple.Create(ivBytes, sigBytes, payloadBytes);
         }
         
+        /// <summary>
+        /// Endpoint to create data for a user.
+        /// </summary>
+        /// <param name="userId">The user's id.</param>
         [HttpPost]
         [Route("{userId}")]
         public async Task<CreateDataResponse> Create(string userId)
@@ -190,6 +227,11 @@ namespace TheGoldenMule.Nk.Controllers
             };
         }
 
+        /// <summary>
+        /// Updates a key's value.
+        /// </summary>
+        /// <param name="userId">The name of the user.</param>
+        /// <param name="key">The key to update.</param>
         [HttpPut]
         [Route("{userId}/{key}")]
         public async Task<UpdateDataResponse> Update(string userId, string key)
@@ -246,6 +288,10 @@ namespace TheGoldenMule.Nk.Controllers
             };
         }
 
+        /// <summary>
+        /// Retrieves keys for a user.
+        /// </summary>
+        /// <param name="userId">The id of the user.</param>
         [HttpGet]
         [Route("{userId}")]
         public async Task<GetKeysResponse> GetKeys(string userId)
@@ -277,6 +323,11 @@ namespace TheGoldenMule.Nk.Controllers
             };
         }
 
+        /// <summary>
+        /// Retrieves a value at a key.
+        /// </summary>
+        /// <param name="userId">The id of the user.</param>
+        /// <param name="key">The key for which to retrieve a value.</param>
         [HttpGet]
         [Route("{userId}/{key}")]
         public async Task Get(string userId, string key)
@@ -299,6 +350,11 @@ namespace TheGoldenMule.Nk.Controllers
             await Response.Body.WriteAsync(StringToBytes(data.Data));
         }
 
+        /// <summary>
+        /// Deletes data at a key.
+        /// </summary>
+        /// <param name="userId">The id of the user.</param>
+        /// <param name="key">The key of the user.</param>
         [HttpDelete]
         [Route("{userId}/{key}")]
         public async Task<DeleteDataResponse> Delete(string userId, string key)

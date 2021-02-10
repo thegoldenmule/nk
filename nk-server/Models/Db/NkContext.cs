@@ -4,6 +4,9 @@
 
 namespace TheGoldenMule.Nk.Models.Db
 {
+    /// <summary>
+    /// Generated context object.
+    /// </summary>
     public partial class NkContext : DbContext
     {
         public NkContext()

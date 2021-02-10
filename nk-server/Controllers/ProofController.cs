@@ -2,23 +2,22 @@ using System;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using TheGoldenMule.Nk.Models.Db;
 using TheGoldenMule.Nk.Models.Network;
 
 namespace TheGoldenMule.Nk.Controllers
 {
+    /// <summary>
+    /// Provides endpoints for proof generation.
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
     public class ProofController : ControllerBase
     {
-        private readonly ILogger<ProofController> _logger;
-
-        public ProofController(ILogger<ProofController> logger)
-        {
-            _logger = logger;
-        }
-
+        /// <summary>
+        /// Creates a proof for a user.
+        /// </summary>
+        /// <param name="userId">The id of a user.</param>
         [HttpPost]
         [Route("{userId}")]
         public async Task<ProofResponse> Create(string userId)
@@ -52,7 +51,11 @@ namespace TheGoldenMule.Nk.Controllers
             };
         }
 
-        // TODO: This doesn't generate a string of the correct length.
+        /// <summary>
+        /// Generates a string of a given byte length.
+        /// </summary>
+        /// <param name="len">The length, in bytes, not the resulting string.</param>
+        /// <returns></returns>
         private static string GenerateRandomString(int len)
         {
             using var rng = new RNGCryptoServiceProvider();
