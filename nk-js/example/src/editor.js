@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, ButtonGroup, ButtonToolbar, Form, Modal, OverlayTrigger, Spinner, Tooltip } from 'react-bootstrap';
+import { Button, ButtonGroup, ButtonToolbar, Form, Modal, Spinner} from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCopy, faHistory, faSave, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faCopy, faSave, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { Editor } from '@toast-ui/react-editor';
 import { connect } from 'react-redux';
 import {
   getDraft,
-  getDraftKey,
   newDraftUpdatedInternal,
   updateBody,
   updateTitle

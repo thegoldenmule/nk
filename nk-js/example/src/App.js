@@ -18,10 +18,10 @@ import {
   getIsLoggedIn,
   newNote,
   getNoteKeys,
-  getNoteValues, loadNote, updateNote, getNoteStatuses, deleteNote, noteStatus
+  getNoteValues, loadNote, updateNote, getNoteStatuses, deleteNote
 } from './slices/nkSlice';
 import { connect } from 'react-redux';
-import { getActiveKey, loadAll, updateActiveKey } from './slices/workspaceSlice';
+import { getActiveKey, updateActiveKey } from './slices/workspaceSlice';
 import { unwrapResult } from '@reduxjs/toolkit';
 import { draftSaved, getDraft, newDraft } from './slices/draftSlice';
 import { noteFromParametersFactory, noteToValue, valueToNote } from './notes';
@@ -70,7 +70,7 @@ function App({
   useEffect(() => {
     const collection = noteKeys.map(key => ({ key, ...(noteValues[key] || {}) }));
     fuseRef.current.setCollection(collection);
-  }, [noteStatuses]);
+  }, [noteStatuses, noteKeys, noteValues]);
 
   // filter and sort keys
   let filteredKeys;

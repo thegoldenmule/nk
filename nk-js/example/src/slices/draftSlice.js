@@ -1,5 +1,4 @@
 import { createSelector, createSlice } from '@reduxjs/toolkit';
-import { getNoteValues } from './nkSlice';
 
 const initialState = {
   drafts: {},

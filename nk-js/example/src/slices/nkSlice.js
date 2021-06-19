@@ -1,11 +1,8 @@
 import {
   createContext,
   createData, deleteData,
-  deserialize,
   getData,
-  getKeys,
   isLoggedIn,
-  register,
   serialize,
   updateData
 } from '../nk-js';
@@ -31,6 +28,7 @@ const initialState = {
 
 // taken from https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
 const newKey = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+  // eslint-disable-next-line
   const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
   return v.toString(16);
 });
@@ -145,7 +143,7 @@ export const echo = createAsyncThunk(
     const a = new Uint8Array(buf);
     const b = new Uint8Array(echoBuf);
     for (let i = 0, len = a.length; i < len; i++) {
-      if (a[i] != b[i]) {
+      if (a[i] !== b[i]) {
         console.log('FAILED', length, a, b);
         return rejectedWithValue(`Values don't match.`);
       }

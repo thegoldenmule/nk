@@ -1,6 +1,6 @@
 import { Button, Col, Container, FormControl, InputGroup, ListGroup, Row, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExclamationTriangle, faLock, faSearch, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
+import { faExclamationTriangle, faLock, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import { useState } from 'react';
 import { noteStatus } from './slices/nkSlice';
 import { connect } from 'react-redux';

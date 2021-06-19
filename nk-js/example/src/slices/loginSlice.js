@@ -58,7 +58,7 @@ export const loadAll = createAsyncThunk(
 
     const notes = getNoteValues(getState());
     const sortedKeys = getSortedKeys(keyNames, notes);
-    const [first, ..._] = sortedKeys;
+    const [first, ] = sortedKeys;
     if (first) {
       dispatch(updateActiveKey(first));
       dispatch(newDraft({ key: first, note: notes[first] }));

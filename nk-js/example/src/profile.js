@@ -66,7 +66,7 @@ const ProfileView = ({
     }
   };
 
-  useEffect(() => dispatchLoginInit(), []);
+  useEffect(() => dispatchLoginInit(), [dispatchLoginInit]);
   const passwordRef = useRef(null);
   useEffect(() => passwordRef.current && passwordRef.current.focus());
 
@@ -141,7 +141,7 @@ const ProfileView = ({
             <Row>
               <Col></Col>
               <Col md={'auto'}>
-                <img src={'./infinity.gif'} />
+                <img src={'./infinity.gif'} alt={'Loading...'} />
               </Col>
               <Col></Col>
             </Row>
