@@ -12,21 +12,52 @@ import {
 } from './slices/draftSlice';
 import { getNoteStatuses, noteStatus } from './slices/nkSlice';
 import { getActiveKey } from './slices/workspaceSlice';
+import { useHotkeys } from 'react-hotkeys-hook';
+
+// Logical component for hotkeys.
+const Hotkey = ({ hotkey: { key, action } }) => {
+  useHotkeys(`command+${key}, ctrl+${key}`, event => {
+    event.preventDefault();
+
+    action();
+  }, {}, [key, action]);
+
+  return null;
+}
 
 const NoteEditor = ({
-  onSave, onDuplicate, onDelete, isSaving,
+  onSave: _onSave, onDuplicate: _onDuplicate, onNew: _onNew, onDelete: _onDelete,
+  isSaving,
   draft: { key, drafts, newDraft },
   dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody }) => {
 
   const { title, body, lastUpdatedAt, } = drafts[key] || {};
+  const onSave = async () => await _onSave({ key, title, body });
+  const onDuplicate = async () => await _onDuplicate(key);
+  const onNew = async () => await _onNew();
+  const onDelete = async () => await _onDelete(key);
 
   const ref = useRef(null);
   const [showDelete, setShowDelete] = useState(false);
+  const [isMetaDown, setIsMetaDown] = useState(false);
+  const [isCtrlDown, setIsCtrlDown] = useState(false);
+
+  const map = [
+    { key: 's', action: onSave },
+    { key: 'd', action: onDuplicate },
+    { key: 'n', action: onNew },
+    { key: 'Delete', action: () => setShowDelete(true) },
+    { key: 'Backspace', action: () => setShowDelete(true) },
+  ];
+
+  // from map
+  const hotkeyComponents = map.map((hotkey, i) => <Hotkey hotkey={hotkey} key={i} />);
 
   useEffect(() => {
     if (newDraft) {
       if (ref.current) {
         ref.current.getInstance().setMarkdown(body);
+        ref.current.getInstance().focus();
       }
 
       dispatchNewDraftInternal();
@@ -42,6 +73,8 @@ const NoteEditor = ({
 
   return (
     <div>
+      {hotkeyComponents}
+
       <Modal show={showDelete} onHide={() => setShowDelete(false)}>
         <Modal.Header>Confirm</Modal.Header>
         <Modal.Body>
@@ -50,7 +83,7 @@ const NoteEditor = ({
         <Modal.Footer>
           <Button variant={'secondary'} onClick={() => setShowDelete(false)}>Close</Button>
           <Button variant={'danger'} onClick={async () => {
-            await onDelete(key);
+            await onDelete();
 
             setShowDelete(false);
           }}>Delete</Button>
@@ -71,9 +104,7 @@ const NoteEditor = ({
         <ButtonToolbar className={'justify-content-between'}>
           <ButtonGroup>
             <Button
-              onClick={async () => {
-                await onSave({ key, title, body });
-              }}
+              onClick={onSave}
             >
               {
                 isSaving
@@ -87,7 +118,7 @@ const NoteEditor = ({
                   : <FontAwesomeIcon icon={faSave} />
               }
             </Button>
-            <Button variant={'outline-secondary'} onClick={() => onDuplicate(key)}>
+            <Button variant={'outline-secondary'} onClick={onDuplicate}>
               <FontAwesomeIcon icon={faCopy} />
             </Button>
           </ButtonGroup>
@@ -108,7 +139,8 @@ const NoteEditor = ({
         previewStyle='vertical'
         height='600px'
         initialEditType='wysiwyg'
-        useCommandShortcut={true}
+        useCommandShortcut={false}
+        usageStatistics={false}
         onChange={() => {
           const contents = ref.current.getInstance().getMarkdown();
           if (body === contents) {
@@ -116,6 +148,29 @@ const NoteEditor = ({
           }
 
           dispatchUpdateBody(contents);
+        }}
+        onKeydown={async (evt) => {
+          const eventKey = evt.data.key;
+          if (eventKey === 'Meta') {
+            setIsMetaDown(true);
+          } else if (eventKey === 'Control') {
+            setIsCtrlDown(true);
+          } else if (isMetaDown || isCtrlDown) {
+            for (const hotkey of map) {
+              if (hotkey.key === eventKey) {
+                evt.data.preventDefault();
+
+                await hotkey.action();
+              }
+            }
+          }
+        }}
+        onKeyup={evt => {
+          if (evt.data.key === 'Meta') {
+            setIsMetaDown(false);
+          } else if (evt.data.key === 'Control') {
+            setIsCtrlDown(false);
+          }
         }}
       />
     </div>
