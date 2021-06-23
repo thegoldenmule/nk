@@ -1,14 +1,19 @@
 import { Button, Col, Container, FormControl, InputGroup, ListGroup, Row, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExclamationTriangle, faLock, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { noteStatus } from './slices/nkSlice';
 import { connect } from 'react-redux';
-import { getQuery, updateQuery } from './slices/filesSlice';
+import { getQuery, getSearchFocus, updateQuery } from './slices/filesSlice';
 
-const FileBrowser = ({  files = [], activeNote, query, dispatchUpdateQuery, onCreateNote, onNoteSelected, }) => {
-  // state
+const FileBrowser = ({ files = [], activeNote, query, searchFocus, dispatchUpdateQuery, onCreateNote, onNoteSelected, }) => {
   const [isCreating, setIsCreating] = useState(false);
+  const searchRef = useRef(null);
+  useEffect(() => {
+    if (searchRef.current) {
+      searchRef.current.focus();
+    }
+  }, [searchFocus]);
 
   // generate list items
   const listItems = [(
@@ -89,7 +94,14 @@ const FileBrowser = ({  files = [], activeNote, query, dispatchUpdateQuery, onCr
     <div>
       <div className={'pb-4'}>
         <InputGroup>
-          <FormControl type={'text'} placeholder={'Search'} size={'lg'} value={query} onChange={evt => dispatchUpdateQuery(evt.target.value)} />
+          <FormControl
+            ref={searchRef}
+            type={'text'}
+            placeholder={'Search'}
+            size={'lg'}
+            value={query}
+            onChange={evt => dispatchUpdateQuery(evt.target.value)}
+          />
           <InputGroup.Append>
             <Button variant={'outline-secondary'} onClick={() => dispatchUpdateQuery('')}>
               <FontAwesomeIcon icon={faTimesCircle} />
@@ -108,6 +120,7 @@ const FileBrowser = ({  files = [], activeNote, query, dispatchUpdateQuery, onCr
 export default connect(
   state => ({
     query: getQuery(state),
+    searchFocus: getSearchFocus(state),
   }),
   dispatch => ({
     dispatchUpdateQuery: query => dispatch(updateQuery(query)),

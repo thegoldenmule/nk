@@ -13,6 +13,7 @@ import {
 import { getNoteStatuses, noteStatus } from './slices/nkSlice';
 import { getActiveKey } from './slices/workspaceSlice';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { focusSearch } from './slices/filesSlice';
 
 // Logical component for hotkeys.
 const Hotkey = ({ hotkey: { key, action } }) => {
@@ -29,7 +30,7 @@ const NoteEditor = ({
   onSave: _onSave, onDuplicate: _onDuplicate, onNew: _onNew, onDelete: _onDelete,
   isSaving,
   draft: { key, drafts, newDraft },
-  dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody }) => {
+  dispatchNewDraftInternal, dispatchUpdateTitle, dispatchUpdateBody, dispatchSearchFocus, }) => {
 
   const { title, body, lastUpdatedAt, } = drafts[key] || {};
   const onSave = async () => await _onSave({ key, title, body });
@@ -37,27 +38,29 @@ const NoteEditor = ({
   const onNew = async () => await _onNew();
   const onDelete = async () => await _onDelete(key);
 
-  const ref = useRef(null);
+  const editorRef = useRef(null);
+  const titleRef = useRef(null);
   const [showDelete, setShowDelete] = useState(false);
-  const [isMetaDown, setIsMetaDown] = useState(false);
-  const [isCtrlDown, setIsCtrlDown] = useState(false);
 
   const map = [
     { key: 's', action: onSave },
     { key: 'd', action: onDuplicate },
     { key: 'n', action: onNew },
+    { key: 'f', action: dispatchSearchFocus },
+    { key: 't', action: () => titleRef.current.focus() },
     { key: 'Delete', action: () => setShowDelete(true) },
     { key: 'Backspace', action: () => setShowDelete(true) },
   ];
 
   // from map
-  const hotkeyComponents = map.map((hotkey, i) => <Hotkey hotkey={hotkey} key={i} />);
+  const hotkeyComponents = map.map((hotkey, i) =>
+    <Hotkey hotkey={hotkey} key={i} />);
 
   useEffect(() => {
     if (newDraft) {
-      if (ref.current) {
-        ref.current.getInstance().setMarkdown(body);
-        ref.current.getInstance().focus();
+      if (editorRef.current) {
+        editorRef.current.getInstance().setMarkdown(body);
+        editorRef.current.getInstance().focus();
       }
 
       dispatchNewDraftInternal();
@@ -92,6 +95,7 @@ const NoteEditor = ({
 
       <div className={'pb-4'}>
         <Form.Control
+          ref={titleRef}
           size={'lg'}
           type={'text'}
           placeholder={'Title'}
@@ -133,7 +137,7 @@ const NoteEditor = ({
       </div>
 
       <Editor
-        ref={ref}
+        ref={editorRef}
         initialValue={body}
         placeholder='Start writing'
         previewStyle='vertical'
@@ -142,7 +146,7 @@ const NoteEditor = ({
         useCommandShortcut={false}
         usageStatistics={false}
         onChange={() => {
-          const contents = ref.current.getInstance().getMarkdown();
+          const contents = editorRef.current.getInstance().getMarkdown();
           if (body === contents) {
             return;
           }
@@ -151,11 +155,9 @@ const NoteEditor = ({
         }}
         onKeydown={async (evt) => {
           const eventKey = evt.data.key;
-          if (eventKey === 'Meta') {
-            setIsMetaDown(true);
-          } else if (eventKey === 'Control') {
-            setIsCtrlDown(true);
-          } else if (isMetaDown || isCtrlDown) {
+          console.log(evt);
+          if ((evt.data.metaKey && !evt.data.ctrlKey)
+            || (evt.data.ctrlKey && !evt.data.metaKey)) {
             for (const hotkey of map) {
               if (hotkey.key === eventKey) {
                 evt.data.preventDefault();
@@ -163,13 +165,6 @@ const NoteEditor = ({
                 await hotkey.action();
               }
             }
-          }
-        }}
-        onKeyup={evt => {
-          if (evt.data.key === 'Meta') {
-            setIsMetaDown(false);
-          } else if (evt.data.key === 'Control') {
-            setIsCtrlDown(false);
           }
         }}
       />
@@ -186,5 +181,6 @@ export default connect(
     dispatchUpdateTitle: title => dispatch(updateTitle(title)),
     dispatchUpdateBody: body => dispatch(updateBody(body)),
     dispatchNewDraftInternal: () => dispatch(newDraftUpdatedInternal()),
+    dispatchSearchFocus: () => dispatch(focusSearch()),
   }),
 )(NoteEditor);
