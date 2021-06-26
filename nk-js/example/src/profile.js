@@ -77,6 +77,7 @@ const ProfileView = ({
 
   return (
     <div>
+      {/* Ask for password dialog. */}
       <Modal centered backdrop={'static'} show={loginPhase === loginPhases.requestingCredentials}>
         <Form onSubmit={evt => {
           evt.preventDefault();
@@ -103,6 +104,8 @@ const ProfileView = ({
           </Modal.Footer>
         </Form>
       </Modal>
+
+      {/* Create a password dialog. */}
       <Modal centered backdrop={'static'} show={registerPhase === registrationPhases.requestingCredentials}>
         <Modal.Header>
           <Modal.Title>Please enter a secure password.</Modal.Title>
@@ -131,6 +134,8 @@ const ProfileView = ({
           <Button disabled={!isValidRegisterPassword} variant={'primary'} onClick={() => dispatchSubmitRegisterPassword()}>Register</Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Decryption dialog. */}
       <Modal centered backdrop={'static'} show={loginPhase === loginPhases.decrypting || registerPhase === registrationPhases.registering}>
         <Modal.Body>
           <Container>
@@ -153,6 +158,8 @@ const ProfileView = ({
           </Container>
         </Modal.Body>
       </Modal>
+
+      {/* Collapsable nav-bar. */}
       <Navbar bg={'light'} expand={'lg'}>
         <Navbar.Brand>
           <img
