@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, ButtonGroup, ButtonToolbar, Form, Modal, Spinner} from 'react-bootstrap';
+import { Button, ButtonGroup, ButtonToolbar, Col, Container, Form, Modal, Row, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faSave, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { Editor } from '@toast-ui/react-editor';
@@ -89,6 +89,7 @@ const NoteEditor = ({
     <div>
       {hotkeyComponents}
 
+      {/* Delete modal. */}
       <Modal show={showDelete} onHide={() => setShowDelete(false)}>
         <Modal.Header>Confirm</Modal.Header>
         <Modal.Body>
@@ -104,84 +105,100 @@ const NoteEditor = ({
         </Modal.Footer>
       </Modal>
 
-      <div className={'pb-4'}>
-        <Form.Control
-          ref={titleRef}
-          size={'lg'}
-          type={'text'}
-          placeholder={'Title'}
-          value={title}
-          onChange={evt => dispatchUpdateTitle(evt.target.value)}
-          onKeyDown={blurOnEscape}
-        />
-      </div>
+      <Container>
 
-      <div className={'pb-4'}>
-        <ButtonToolbar className={'justify-content-between'}>
-          <ButtonGroup>
-            <Button
-              onClick={onSave}
-            >
-              {
-                isSaving
-                  ? <Spinner
-                    as={'span'}
-                    animation={'border'}
-                    size={'sm'}
-                    role={'status'}
-                    aria-hidden={'true'}
-                  />
-                  : <FontAwesomeIcon icon={faSave} />
-              }
-            </Button>
-            <Button variant={'outline-secondary'} onClick={onDuplicate}>
-              <FontAwesomeIcon icon={faCopy} />
-            </Button>
-          </ButtonGroup>
-          <p className={'mb-0 mt-2'}><small>Last saved {lastUpdateTime.toLocaleString('en-US')}</small></p>
-          <ButtonGroup>
-            <Button
-              variant={'outline-danger'}
-              onClick={() => setShowDelete(true)}
-            ><FontAwesomeIcon icon={faTrash} /></Button>
-          </ButtonGroup>
-        </ButtonToolbar>
-      </div>
+        {/* Note title */}
+        <Row>
+          <Col>
+            <Form.Control
+              ref={titleRef}
+              size={'lg'}
+              type={'text'}
+              placeholder={'Title'}
+              value={title}
+              onChange={evt => dispatchUpdateTitle(evt.target.value)}
+              onKeyDown={blurOnEscape}
+            />
+          </Col>
+        </Row>
 
-      <Editor
-        ref={editorRef}
-        initialValue={body}
-        placeholder='Start writing'
-        previewStyle='vertical'
-        height='600px'
-        initialEditType='wysiwyg'
-        useCommandShortcut={false}
-        usageStatistics={false}
-        onChange={() => {
-          const contents = editorRef.current.getInstance().getMarkdown();
-          if (body === contents) {
-            return;
-          }
+        {/* Note toolbar */}
+        <Row className={'pb-4 pt-4'}>
+          <Col xs={4} className={'justify-content-center'}>
+            <ButtonGroup>
+              <Button
+                onClick={onSave}
+              >
+                {
+                  isSaving
+                    ? <Spinner
+                      as={'span'}
+                      animation={'border'}
+                      size={'sm'}
+                      role={'status'}
+                      aria-hidden={'true'}
+                    />
+                    : <FontAwesomeIcon icon={faSave} />
+                }
+              </Button>
+              <Button variant={'outline-secondary'} onClick={onDuplicate}>
+                <FontAwesomeIcon icon={faCopy} />
+              </Button>
+            </ButtonGroup>
+          </Col>
+          <Col xs={6}>
+            <p className={'mt-2 mb-n2 mr-n2 ml-n2'}><small>{lastUpdateTime.toLocaleString('en-US')}</small></p>
+          </Col>
+          <Col xs={2}>
+            <ButtonGroup>
+              <Button
+                variant={'outline-danger'}
+                onClick={() => setShowDelete(true)}
+              ><FontAwesomeIcon icon={faTrash} /></Button>
+            </ButtonGroup>
+          </Col>
+        </Row>
 
-          dispatchUpdateBody(contents);
-        }}
-        onKeydown={async (evt) => {
-          const eventKey = evt.data.key;
+        {/* Note text editor */}
+        <Row>
+          <Col>
+            <Editor
+              ref={editorRef}
+              initialValue={body}
+              placeholder='Start writing'
+              previewStyle='vertical'
+              height='600px'
+              initialEditType='wysiwyg'
+              useCommandShortcut={false}
+              usageStatistics={false}
+              onChange={() => {
+                const contents = editorRef.current.getInstance().getMarkdown();
+                if (body === contents) {
+                  return;
+                }
 
-          if ((evt.data.metaKey && !evt.data.ctrlKey)
-            || (evt.data.ctrlKey && !evt.data.metaKey)) {
-            for (const hotkey of map) {
-              if (hotkey.key === eventKey) {
-                evt.data.preventDefault();
+                dispatchUpdateBody(contents);
+              }}
+              onKeydown={async (evt) => {
+                const eventKey = evt.data.key;
 
-                await hotkey.action();
-              }
-            }
-          } else if (eventKey === 'Escape') {
-            editorRef.current.getInstance().blur();
-          }
-        }}
-      />
+                if ((evt.data.metaKey && !evt.data.ctrlKey)
+                  || (evt.data.ctrlKey && !evt.data.metaKey)) {
+                  for (const hotkey of map) {
+                    if (hotkey.key === eventKey) {
+                      evt.data.preventDefault();
+
+                      await hotkey.action();
+                    }
+                  }
+                } else if (eventKey === 'Escape') {
+                  editorRef.current.getInstance().blur();
+                }
+              }}
+            />
+          </Col>
+        </Row>
+      </Container>
     </div>
   );
 };
