@@ -145,7 +145,7 @@ const ProfileView = ({
             </Row>
             <Row>
               <Col></Col>
-              <Col md={'auto'}>
+              <Col xs={'auto'}>
                 <img src={'./infinity.gif'} alt={'Loading...'} />
               </Col>
               <Col></Col>
