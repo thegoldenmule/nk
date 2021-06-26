@@ -1,4 +1,4 @@
-import { Alert, Button, Col, Container, Form, Modal, Nav, Navbar, Row, Spinner } from 'react-bootstrap';
+import { Alert, Button, Col, Container, Form, FormControl, Modal, Nav, Navbar, Row, Spinner } from 'react-bootstrap';
 import { connect } from 'react-redux';
 import { getContext, getIsLoggedIn, } from './slices/nkSlice';
 import {
@@ -78,25 +78,30 @@ const ProfileView = ({
   return (
     <div>
       <Modal centered backdrop={'static'} show={loginPhase === loginPhases.requestingCredentials}>
-        <Modal.Header>
-          <Modal.Title>Please enter your password.</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form.Control
-            ref={passwordRef}
-            size={'sm'}
-            type={'password'}
-            placeholder={'Password'}
-            value={loginValue}
-            onChange={evt => dispatchUpdateLoginPassword(evt.target.value)}
-          />
-          {
-            loginError && <div className={'pt-4'}><Alert variant={'danger'}>{loginError}</Alert></div>
-          }
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant={'primary'} onClick={() => dispatchSubmitLoginPassword()}>Login</Button>
-        </Modal.Footer>
+        <Form onSubmit={evt => {
+          evt.preventDefault();
+          dispatchSubmitLoginPassword();
+        }}>
+          <Modal.Header>
+            <Modal.Title>Please enter your password.</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Control
+              ref={passwordRef}
+              size={'sm'}
+              type={'password'}
+              placeholder={'Password'}
+              value={loginValue}
+              onChange={evt => dispatchUpdateLoginPassword(evt.target.value)}
+            />
+            {
+              loginError && <div className={'pt-4'}><Alert variant={'danger'}>{loginError}</Alert></div>
+            }
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant={'primary'} type={'submit'} >Login</Button>
+          </Modal.Footer>
+        </Form>
       </Modal>
       <Modal centered backdrop={'static'} show={registerPhase === registrationPhases.requestingCredentials}>
         <Modal.Header>
