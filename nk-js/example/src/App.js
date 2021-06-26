@@ -161,15 +161,17 @@ function App({
   };
 
   return (
-    <Container className={'h-100 mh-100'}>
+    <Container>
       <ProfileView
         context={context}
       />
 
       {
         isLoggedIn && (
-          <Row className={'p-2 h-100'}>
-            <Col className={'p-2'} xs={4}>
+          <Row className={'p-2'} xs={1} sm={1} md={2} lg={2}>
+
+            {/* Left-hand search and file browser. */}
+            <Col className={'p-2'} md={4} lg={4} xl={4}>
               <FileBrowser
                 files={files}
                 activeNote={activeKey}
@@ -178,7 +180,8 @@ function App({
               />
             </Col>
 
-            <Col className={'p-2 h-100'}>
+            {/* Title, toolbar, editor. */}
+            <Col className={'p-2'}>
               <NoteEditor onSave={onSave} onDuplicate={onDuplicate} onDelete={onDelete} />
             </Col>
           </Row>
