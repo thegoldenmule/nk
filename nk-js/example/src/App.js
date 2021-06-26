@@ -168,10 +168,10 @@ function App({
 
       {
         isLoggedIn && (
-          <Row className={'p-2'} xs={1} sm={1} md={2} lg={2}>
+          <Row className={'p-2'} xs={1} sm={1} md={1} lg={2}>
 
             {/* Left-hand search and file browser. */}
-            <Col className={'p-2'} md={4} lg={4} xl={4}>
+            <Col className={'p-2'} lg={4} xl={4}>
               <FileBrowser
                 files={files}
                 activeNote={activeKey}
@@ -181,7 +181,7 @@ function App({
             </Col>
 
             {/* Title, toolbar, editor. */}
-            <Col className={'p-2'}>
+            <Col className={'p-2'} lg={8} xl={8}>
               <NoteEditor onSave={onSave} onDuplicate={onDuplicate} onDelete={onDelete} />
             </Col>
           </Row>

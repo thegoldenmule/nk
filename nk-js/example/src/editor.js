@@ -105,8 +105,7 @@ const NoteEditor = ({
         </Modal.Footer>
       </Modal>
 
-      <Container>
-
+      <Container className={'p-0'}>
         {/* Note title */}
         <Row>
           <Col>
@@ -123,9 +122,9 @@ const NoteEditor = ({
         </Row>
 
         {/* Note toolbar */}
-        <Row className={'pb-4 pt-4'}>
-          <Col xs={4} className={'justify-content-center'}>
-            <ButtonGroup>
+        <Row className={'pb-4 pt-4'} noGutters>
+          <Col>
+            <ButtonGroup className={'mr-2'}>
               <Button
                 onClick={onSave}
               >
@@ -145,17 +144,15 @@ const NoteEditor = ({
                 <FontAwesomeIcon icon={faCopy} />
               </Button>
             </ButtonGroup>
-          </Col>
-          <Col xs={6}>
-            <p className={'mt-2 mb-n2 mr-n2 ml-n2'}><small>{lastUpdateTime.toLocaleString('en-US')}</small></p>
-          </Col>
-          <Col xs={2}>
-            <ButtonGroup>
+            <ButtonGroup className={'mr-2'}>
               <Button
                 variant={'outline-danger'}
                 onClick={() => setShowDelete(true)}
               ><FontAwesomeIcon icon={faTrash} /></Button>
             </ButtonGroup>
+          </Col>
+          <Col>
+            <p className={'mt-2 mb-n2 text-right'}><small>{lastUpdateTime.toLocaleString('en-US')}</small></p>
           </Col>
         </Row>
 
