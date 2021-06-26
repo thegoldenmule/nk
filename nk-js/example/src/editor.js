@@ -14,6 +14,7 @@ import { getNoteStatuses, noteStatus } from './slices/nkSlice';
 import { getActiveKey } from './slices/workspaceSlice';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { focusSearch } from './slices/filesSlice';
+import { blurOnEscape } from './utility';
 
 // Logical component for hotkeys.
 const Hotkey = ({ hotkey: { key, action } }) => {
@@ -47,7 +48,17 @@ const NoteEditor = ({
     { key: 'd', action: onDuplicate },
     { key: 'n', action: onNew },
     { key: 'f', action: dispatchSearchFocus },
-    { key: 't', action: () => titleRef.current.focus() },
+    { key: 'e', action: () => editorRef.current.getInstance().focus() },
+    { key: 'h', action: () => titleRef.current.focus() },
+    { key: 'm', action: () => {
+      if (editorRef.current) {
+        if (editorRef.current.getInstance().isMarkdownMode()) {
+          editorRef.current.getInstance().changeMode('wysiwyg');
+        } else {
+          editorRef.current.getInstance().changeMode('markdown');
+        }
+      }
+    }},
     { key: 'Delete', action: () => setShowDelete(true) },
     { key: 'Backspace', action: () => setShowDelete(true) },
   ];
@@ -101,6 +112,7 @@ const NoteEditor = ({
           placeholder={'Title'}
           value={title}
           onChange={evt => dispatchUpdateTitle(evt.target.value)}
+          onKeyDown={blurOnEscape}
         />
       </div>
 
@@ -155,7 +167,7 @@ const NoteEditor = ({
         }}
         onKeydown={async (evt) => {
           const eventKey = evt.data.key;
-          console.log(evt);
+
           if ((evt.data.metaKey && !evt.data.ctrlKey)
             || (evt.data.ctrlKey && !evt.data.metaKey)) {
             for (const hotkey of map) {
@@ -165,6 +177,8 @@ const NoteEditor = ({
                 await hotkey.action();
               }
             }
+          } else if (eventKey === 'Escape') {
+            editorRef.current.getInstance().blur();
           }
         }}
       />

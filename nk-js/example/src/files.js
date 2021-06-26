@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { noteStatus } from './slices/nkSlice';
 import { connect } from 'react-redux';
 import { getQuery, getSearchFocus, updateQuery } from './slices/filesSlice';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { blurOnEscape } from './utility';
 
 const FileBrowser = ({ files = [], activeNote, query, searchFocus, dispatchUpdateQuery, onCreateNote, onNoteSelected, }) => {
   const [isCreating, setIsCreating] = useState(false);
@@ -101,6 +103,7 @@ const FileBrowser = ({ files = [], activeNote, query, searchFocus, dispatchUpdat
             size={'lg'}
             value={query}
             onChange={evt => dispatchUpdateQuery(evt.target.value)}
+            onKeyDown={blurOnEscape}
           />
           <InputGroup.Append>
             <Button variant={'outline-secondary'} onClick={() => dispatchUpdateQuery('')}>
