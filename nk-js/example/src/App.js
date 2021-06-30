@@ -49,33 +49,45 @@ export const getSortedKeys = (noteKeys, noteValues) => {
   return filteredKeys;
 };
 
+const withSearch = (Component) => {
+  return props => {
+    const { noteKeys, noteValues, noteStatuses, } = props;
+
+    // create and maintain search index
+    const fuseRef = useRef(new Fuse(
+      [],
+      {
+        includeScore: true,
+        ignoreLocation: true,
+        shouldSort: true,
+        keys: ['title', 'body',],
+      }));
+    useEffect(() => {
+      const collection = noteKeys.map(key => ({ key, ...(noteValues[key] || {}) }));
+      fuseRef.current.setCollection(collection);
+    }, [noteStatuses, noteKeys, noteValues]);
+
+    return <Component search={query => fuseRef.current.search(query)} {...props} />;
+  }
+};
+
 function App({
+  // searches index
+  search,
+
+  // note information
+  noteKeys, noteValues, noteStatuses,
+
   context, isLoggedIn,
   activeKey, dispatchUpdateActiveKey,
-  noteKeys, noteValues, noteStatuses,
+
   draft, query,
   dispatchNewNote, dispatchLoadNote, dispatchUpdateNote, dispatchDeleteNote,
 }) {
-  // create a search index
-  const fuseRef = useRef(new Fuse(
-    [],
-    {
-      includeScore: true,
-      ignoreLocation: true,
-      shouldSort: true,
-      keys: ['title', 'body',],
-    }));
-
-  // update index when note statuses change
-  useEffect(() => {
-    const collection = noteKeys.map(key => ({ key, ...(noteValues[key] || {}) }));
-    fuseRef.current.setCollection(collection);
-  }, [noteStatuses, noteKeys, noteValues]);
-
   // filter and sort keys
   let filteredKeys;
   if (query) {
-    const results = fuseRef.current.search(query);
+    const results = search(query);
     filteredKeys = results.map(({ item: { key } }) => key);
   } else {
     // sort list of all keys by last update
@@ -97,6 +109,7 @@ function App({
     return { key: k, name: k, status, lastUpdatedAt };
   });
 
+  // called to create note
   const onCreateNote = async from => {
     const res = await dispatchNewNote(from);
 
@@ -111,6 +124,7 @@ function App({
     dispatchUpdateActiveKey({ key, note });
   };
 
+  // called to save note
   const onSave = async () => {
     await dispatchUpdateNote({
       key: activeKey,
@@ -121,6 +135,7 @@ function App({
     });
   };
 
+  // called to duplicate note
   const onDuplicate = async key => {
     const source = valueToNote(noteToValue(noteValues[key]));
     source.title += ' (Copy)';
@@ -128,6 +143,7 @@ function App({
     return await onCreateNote(source);
   };
 
+  // called to delete note
   const onDelete = async () => {
     await dispatchDeleteNote(activeKey);
 
@@ -143,6 +159,7 @@ function App({
     }
   };
 
+  // called to select note
   const onSelectNote = async key => {
     let note = noteValues[key];
     if (!note) {
@@ -240,4 +257,4 @@ export default connect(
       dispatch(newDraft({ key, note }));
     },
   }),
-)(App);
+)(withSearch(App));
