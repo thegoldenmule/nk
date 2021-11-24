@@ -1,29 +1,34 @@
-# Use postgres/example user/password credentials
-version: '3.1'
+version: '3.9'
 
 services:
 
-  nk:
-    image: nk-server
-    restart: always
-    ports:
-      - 80:80
-
   db:
-    image: postgres
-    restart: always
+    image: postgres:14.1
     environment:
-      POSTGRES_PASSWORD: example
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     ports:
       - 5432:5432
     volumes:
-      - data:/var/lib/postgresql/data
+      - ./.data:/var/lib/postgresql/data
+      - ./scripts/init-all-dbs.sh:/docker-entrypoint-initdb.d/init-all-dbs.sh
+
+  nk:
+    image: mcr.microsoft.com/dotnet/sdk:6.0
+    environment:
+      - DB_CONN_STRING=Server=db;Database=nk;Username=postgres;Password=postgres
+      - PORT=80
+    expose:
+      - "80"
+    ports:
+      - "80:80"
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: dotnet watch ${COMMAND}
 
   adminer:
     image: adminer
-    restart: always
     ports:
       - 8080:8080
-
-volumes:
-    data:
