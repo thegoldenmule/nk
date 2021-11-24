@@ -2,13 +2,20 @@ import { Button, Col, Container, FormControl, InputGroup, ListGroup, Row, Spinne
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExclamationTriangle, faLock, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useRef, useState } from 'react';
-import { noteStatus } from './slices/nkSlice';
+import { getNoteValues, loadNote, newNote, noteStatus } from './slices/nkSlice';
 import { connect } from 'react-redux';
 import { getQuery, getSearchFocus, updateQuery } from './slices/filesSlice';
-import { useHotkeys } from 'react-hotkeys-hook';
 import { blurOnEscape } from './utility';
+import { unwrapResult } from '@reduxjs/toolkit';
+import { updateActiveKey } from './slices/workspaceSlice';
+import { newDraft } from './slices/draftSlice';
 
-const FileBrowser = ({ files = [], activeNote, query, searchFocus, dispatchUpdateQuery, onCreateNote, onNoteSelected, }) => {
+const FileBrowser = ({
+  files = [],
+  activeNote, query, searchFocus, noteValues,
+  dispatchUpdateQuery, dispatchNewNote, dispatchUpdateActiveKey, dispatchLoadNote }) => {
+
+  // hooks
   const [isCreating, setIsCreating] = useState(false);
   const searchRef = useRef(null);
   useEffect(() => {
@@ -16,6 +23,40 @@ const FileBrowser = ({ files = [], activeNote, query, searchFocus, dispatchUpdat
       searchRef.current.focus();
     }
   }, [searchFocus]);
+
+  // handler to create a new note
+  const onCreateNote = async from => {
+    // create note
+    const res = await dispatchNewNote({ from });
+    let payload;
+    try {
+      payload = await unwrapResult(res);
+    } catch (error) {
+      return;
+    }
+
+    // select note
+    const { key, note } = payload;
+    dispatchUpdateActiveKey({ key, note });
+  };
+
+  // called to select note
+  const onNoteSelected = async key => {
+    let note = noteValues[key];
+    if (!note) {
+      let res = await dispatchLoadNote({ key });
+
+      try {
+        res = unwrapResult(res);
+        note = res.note;
+      } catch (error) {
+        // if load note doesn't work, do not update active key
+        return;
+      }
+    }
+
+    dispatchUpdateActiveKey({ key, note });
+  };
 
   // generate list items
   const listItems = [(
@@ -102,11 +143,11 @@ const FileBrowser = ({ files = [], activeNote, query, searchFocus, dispatchUpdat
             placeholder={'Search'}
             size={'lg'}
             value={query}
-            onChange={evt => dispatchUpdateQuery(evt.target.value)}
+            onChange={evt => dispatchUpdateQuery({ query: evt.target.value })}
             onKeyDown={blurOnEscape}
           />
           <InputGroup.Append>
-            <Button variant={'outline-secondary'} onClick={() => dispatchUpdateQuery('')}>
+            <Button variant={'outline-secondary'} onClick={() => dispatchUpdateQuery({ query: '' })}>
               <FontAwesomeIcon icon={faTimesCircle} />
             </Button>
           </InputGroup.Append>
@@ -124,8 +165,22 @@ export default connect(
   state => ({
     query: getQuery(state),
     searchFocus: getSearchFocus(state),
+    noteValues: getNoteValues(state),
   }),
   dispatch => ({
-    dispatchUpdateQuery: query => dispatch(updateQuery(query)),
+    // search bar
+    dispatchUpdateQuery: ({ query }) => dispatch(updateQuery(query)),
+
+    // new note
+    dispatchNewNote: ({ from }) => dispatch(newNote({ from })),
+
+    // select note
+    dispatchUpdateActiveKey: ({ key, note }) => {
+      dispatch(updateActiveKey(key));
+      dispatch(newDraft({ key, note }));
+    },
+
+    // loads note
+    dispatchLoadNote: ({ key }) => dispatch(loadNote(key)),
   }),
 )(FileBrowser);

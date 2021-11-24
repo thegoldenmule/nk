@@ -15,6 +15,7 @@ import { getActiveKey } from './slices/workspaceSlice';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { focusSearch } from './slices/filesSlice';
 import { blurOnEscape } from './utility';
+import { noteFromParametersFactory, noteToValue, valueToNote } from './notes';
 
 // Logical component for hotkeys.
 const Hotkey = ({ hotkey: { key, action } }) => {
@@ -38,7 +39,42 @@ const NoteEditor = ({
   const onDuplicate = async () => await _onDuplicate(key);
   const onNew = async () => await _onNew();
   const onDelete = async () => await _onDelete(key);
+  // called to save note
+  const onSave = async () => {
+    await dispatchUpdateNote({
+      key: activeKey,
+      note: noteFromParametersFactory({
+        title: draft.drafts[activeKey].title,
+        body: draft.drafts[activeKey].body,
+      }),
+    });
+  };
 
+  // called to duplicate note
+  const onDuplicate = async key => {
+    const source = valueToNote(noteToValue(noteValues[key]));
+    source.title += ' (Copy)';
+
+    //return await onCreateNote(source);
+  };
+
+  // called to delete note
+  const onDelete = async () => {
+    await dispatchDeleteNote(activeKey);
+
+    // select next note
+    for (let i = 0, len = filteredKeys.length; i < len; i++) {
+      const k = filteredKeys[i];
+      if (k !== activeKey) {
+        return await dispatchUpdateActiveKey({
+          key: k,
+          note: noteValues[k],
+        });
+      }
+    }
+  };
+
+  // hooks
   const editorRef = useRef(null);
   const titleRef = useRef(null);
   const [showDelete, setShowDelete] = useState(false);

@@ -109,74 +109,6 @@ function App({
     return { key: k, name: k, status, lastUpdatedAt };
   });
 
-  // called to create note
-  const onCreateNote = async from => {
-    const res = await dispatchNewNote(from);
-
-    let payload;
-    try {
-      payload = await unwrapResult(res);
-    } catch (error) {
-      return;
-    }
-
-    const { key, note } = payload;
-    dispatchUpdateActiveKey({ key, note });
-  };
-
-  // called to save note
-  const onSave = async () => {
-    await dispatchUpdateNote({
-      key: activeKey,
-      note: noteFromParametersFactory({
-        title: draft.drafts[activeKey].title,
-        body: draft.drafts[activeKey].body,
-      }),
-    });
-  };
-
-  // called to duplicate note
-  const onDuplicate = async key => {
-    const source = valueToNote(noteToValue(noteValues[key]));
-    source.title += ' (Copy)';
-
-    return await onCreateNote(source);
-  };
-
-  // called to delete note
-  const onDelete = async () => {
-    await dispatchDeleteNote(activeKey);
-
-    // select next note
-    for (let i = 0, len = filteredKeys.length; i < len; i++) {
-      const k = filteredKeys[i];
-      if (k !== activeKey) {
-        return await dispatchUpdateActiveKey({
-          key: k,
-          note: noteValues[k],
-        });
-      }
-    }
-  };
-
-  // called to select note
-  const onSelectNote = async key => {
-    let note = noteValues[key];
-    if (!note) {
-      let res = await dispatchLoadNote(key)
-
-      try {
-        res = unwrapResult(res);
-        note = res.note;
-      } catch (error) {
-        // if load note doesn't work, do not update active key
-        return;
-      }
-    }
-
-    dispatchUpdateActiveKey({ key, note });
-  };
-
   return (
     <Container>
       <ProfileView
@@ -192,14 +124,16 @@ function App({
               <FileBrowser
                 files={files}
                 activeNote={activeKey}
-                onCreateNote={onCreateNote}
-                onNoteSelected={onSelectNote}
               />
             </Col>
 
             {/* Title, toolbar, editor. */}
             <Col className={'p-2'} lg={8} xl={8}>
-              <NoteEditor onSave={onSave} onDuplicate={onDuplicate} onDelete={onDelete} />
+              <NoteEditor
+                onSave={onSave}
+                onDuplicate={onDuplicate}
+                onDelete={onDelete}
+              />
             </Col>
           </Row>
         )
@@ -232,8 +166,6 @@ export default connect(
     query: getQuery(state),
   }),
   dispatch => ({
-    dispatchNewNote: from => dispatch(newNote({ from })),
-    dispatchLoadNote: key => dispatch(loadNote(key)),
     dispatchUpdateNote: async ({ key, note }) => {
       const res = await dispatch(updateNote({ key, note }));
 
