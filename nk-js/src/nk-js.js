@@ -220,7 +220,8 @@ const aesParameters = iv => ({
 });
 
 const createContext = () => ({
-  url: 'https://nk-server.thegoldenmule.com',
+  //url: 'https://nk-server.thegoldenmule.com',
+  url: 'http://localhost',
   userId: undefined,
   keys: {
     signing: undefined,

@@ -10,6 +10,22 @@ There is no form of key exchange with `nk`, though running `nk` behind strong TL
 
 `Nk` does not meet the technical requirements of a zero-knowledge system (eg- see [zCash's zk-SNARK](https://z.cash/technology/zksnarks/)), therefore the semi-ambiguous term "no knowlege" is used throughout.
 
+##### Quick Start
+
+Prerequisites:
+
+- `docker`
+- `make`
+
+```
+make restore
+make run
+```
+
+Go to `http://localhost:3600`.
+
+That's it! No node, no .NET, no db. This will spin up postgres, adminer, nk-server, and nk-web. Both the server and web projects will rebuild automatically with changes.
+
 ##### Why?
 
 This project exists for a few reasons.

@@ -13,22 +13,42 @@ services:
     volumes:
       - ./.data:/var/lib/postgresql/data
       - ./scripts/init-all-dbs.sh:/docker-entrypoint-initdb.d/init-all-dbs.sh
+  
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
 
   nk:
     image: mcr.microsoft.com/dotnet/sdk:6.0
     environment:
       - DB_CONN_STRING=Server=db;Database=nk;Username=postgres;Password=postgres
-      - PORT=80
+      - PORT=1337
     expose:
-      - "80"
+      - "1337"
     ports:
-      - "80:80"
+      - "1337:1337"
     working_dir: /app
     volumes:
-      - .:/app
-    command: dotnet watch ${COMMAND}
+      - ./nk-server:/app
+    command: dotnet ${NK_COMMAND}
+    depends_on:
+      - db
 
-  adminer:
-    image: adminer
+  nk-web:
+    image: node:16
+    environment:
+      - NODE_ENV=development
+      - BROWSER_ARGS='nk-url=http://localhost:1337'
+    working_dir: /app
+    volumes:
+      - ./nk-js:/app
+    expose:
+      - "3600"
     ports:
-      - 8080:8080
+      - "3600:3600"
+    command: npm run ${NKWEB_COMMAND}
+    depends_on:
+      - nk
