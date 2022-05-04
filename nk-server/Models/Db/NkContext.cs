@@ -26,7 +26,7 @@ namespace TheGoldenMule.Nk.Models.Db
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseNpgsql("Server=db;Database=nk;Username=postgres;Password=example");
+                optionsBuilder.UseNpgsql(System.Environment.GetEnvironmentVariable("DB_CONN_STRING"));
             }
         }
 
