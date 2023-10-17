@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import { noteStatus } from './slices/nkSlice';
 import { connect } from 'react-redux';
 import { getQuery, getSearchFocus, updateQuery } from './slices/filesSlice';
-import { useHotkeys } from 'react-hotkeys-hook';
 import { blurOnEscape } from './utility';
 
 const FileBrowser = ({ files = [], activeNote, query, searchFocus, dispatchUpdateQuery, onCreateNote, onNoteSelected, }) => {

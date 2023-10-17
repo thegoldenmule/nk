@@ -1,5 +1,5 @@
 {
-  "name": "example",
+  "name": "nk",
   "version": "0.1.0",
   "homepage": ".",
   "private": true,
@@ -12,8 +12,9 @@
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.3",
     "@testing-library/user-event": "^12.6.0",
-    "@toast-ui/react-editor": "^2.5.1",
+    "@toast-ui/react-editor": "^3.2.3",
     "bootstrap": "^4.5.3",
+    "codemirror": "^5.65.15",
     "fuse.js": "^6.4.6",
     "hotkeys-js": "^3.8.7",
     "react": "^17.0.1",
@@ -29,10 +30,10 @@
   },
   "scripts": {
     "restore": "npm install",
-    "start": "PORT=3600 HOST=0.0.0.0 ./node_modules/.bin/react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "NODE_OPTIONS=--openssl-legacy-provider PORT=3600 HOST=0.0.0.0 ./node_modules/.bin/react-scripts start",
+    "build": "NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
+    "test": "NODE_OPTIONS=--openssl-legacy-provider react-scripts test",
+    "eject": "NODE_OPTIONS=--openssl-legacy-provider react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
